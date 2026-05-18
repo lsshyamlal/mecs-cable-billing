@@ -21,6 +21,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // Used by daily scheduler: find subscriptions past end date in a given status
     List<Subscription> findByStatusAndEndDateBefore(SubscriptionStatus status, LocalDate date);
 
+    List<Subscription> findByStatus(SubscriptionStatus status);
+
     // Customer portal: last 12 months of subscription history
     List<Subscription> findByCustomerAndStartDateAfterOrderByStartDateDesc(Customer customer, LocalDate since);
+
+    // Find subscriptions whose start date falls within a given month window
+    List<Subscription> findByCustomerAndStartDateBetween(Customer customer, LocalDate from, LocalDate to);
 }

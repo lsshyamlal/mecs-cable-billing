@@ -150,9 +150,11 @@ public class ReportService {
 
     private PaymentReportRow toPaymentReportRow(Payment p) {
         Customer c = p.getCustomer();
+        LocalDate forMonth = p.getSubscription() != null ? p.getSubscription().getStartDate().withDayOfMonth(1) : null;
         return new PaymentReportRow(
                 p.getPaymentId(),
                 p.getPaymentDate(),
+                forMonth,
                 c.getCustomerId(),
                 c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : ""),
                 c.getArea().getAreaName(),
@@ -165,13 +167,14 @@ public class ReportService {
     }
 
     private String[] paymentCsvHeaders() {
-        return new String[]{"Payment ID", "Date", "Customer ID", "Customer Name", "Area", "Phone", "Amount (₹)", "Method", "Recorded By", "Notes"};
+        return new String[]{"Payment ID", "Payment Date", "For Month", "Customer ID", "Customer Name", "Area", "Phone", "Amount (₹)", "Method", "Recorded By", "Notes"};
     }
 
     private String[] paymentCsvRow(PaymentReportRow r) {
         return new String[]{
                 String.valueOf(r.paymentId()),
                 str(r.paymentDate()),
+                str(r.forMonth()),
                 String.valueOf(r.customerId()),
                 r.customerName(),
                 r.areaName(),

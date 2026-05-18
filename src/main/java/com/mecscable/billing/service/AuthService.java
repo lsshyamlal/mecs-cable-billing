@@ -156,12 +156,14 @@ public class AuthService {
     private LoginResponse toLoginResponse(Admin admin) {
         String name = admin.getFirstName()
                 + (admin.getLastName() != null ? " " + admin.getLastName() : "");
-        return new LoginResponse("ROLE_ADMIN", admin.getAdminId(), name, admin.getEmail());
+        return new LoginResponse("ROLE_ADMIN", admin.getAdminId(), name, admin.getEmail(),
+                System.currentTimeMillis() + refreshTokenExpiryMs);
     }
 
     private LoginResponse toLoginResponse(Customer customer) {
         String name = customer.getFirstName()
                 + (customer.getLastName() != null ? " " + customer.getLastName() : "");
-        return new LoginResponse("ROLE_CUSTOMER", customer.getCustomerId(), name, customer.getEmail());
+        return new LoginResponse("ROLE_CUSTOMER", customer.getCustomerId(), name, customer.getEmail(),
+                System.currentTimeMillis() + refreshTokenExpiryMs);
     }
 }

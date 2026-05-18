@@ -22,7 +22,7 @@ public class AreaService {
     public List<AreaResponse> getAllAreas() {
         return areaRepository.findAllByOrderByAreaNameAsc()
                 .stream()
-                .map(a -> new AreaResponse(a.getAreaId(), a.getAreaName()))
+                .map(a -> new AreaResponse(a.getAreaId(), a.getAreaName(), a.getGracePeriodDay()))
                 .toList();
     }
 
@@ -33,7 +33,8 @@ public class AreaService {
         }
         Area area = new Area();
         area.setAreaName(request.areaName().trim());
+        area.setGracePeriodDay(request.gracePeriodDay());
         area = areaRepository.save(area);
-        return new AreaResponse(area.getAreaId(), area.getAreaName());
+        return new AreaResponse(area.getAreaId(), area.getAreaName(), area.getGracePeriodDay());
     }
 }

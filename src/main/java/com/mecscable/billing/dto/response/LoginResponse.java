@@ -4,5 +4,6 @@ public record LoginResponse(
         String role,
         Long userId,
         String name,
-        String email
+        String email,
+        long sessionExpiresAt
 ) {}

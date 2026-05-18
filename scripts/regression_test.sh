@@ -58,6 +58,9 @@ this_month_start() { date +%Y-%m-01; }
 next_month_start() { date -v1d -v+1m +%Y-%m-%d; }   # macOS date
 today()            { date +%Y-%m-%d; }
 
+THIS_MONTH=$(this_month_start)
+NEXT_MONTH=$(next_month_start)
+
 # ── AUTH ─────────────────────────────────────────────────────
 
 section "AUTH"
@@ -98,7 +101,6 @@ check "Area in GET /areas list" "Regression Test Area" "$AREA_IN_LIST"
 
 section "CUSTOMERS"
 
-THIS_MONTH=$(this_month_start)
 CREATE_CUST=$(POST "/api/customers" \
   "{\"firstName\":\"Regression\",\"lastName\":\"User\",\"doorNumber\":\"T99\",\"streetName\":\"Test Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000099\",\"stbId\":\"STB-REGR-01\",\"monthlyRate\":350,\"subscriptionStartDate\":\"$THIS_MONTH\"}")
 CUST_ID=$(echo "$CREATE_CUST" | jq -r '.customerId')
@@ -133,7 +135,7 @@ check "Update customer → phone changed" "0000000098" "$(echo "$UPDATE_RESP" | 
 
 section "PAYMENTS"
 
-PAY1=$(POST "/api/payments/$CUST_ID" '{"amount":350,"paymentMethod":"CASH","notes":"Test payment 1"}')
+PAY1=$(POST "/api/payments/$CUST_ID" "{\"amount\":350,\"forMonth\":\"$THIS_MONTH\",\"paymentMethod\":\"CASH\",\"notes\":\"Test payment 1\"}")
 PAY1_ID=$(echo "$PAY1" | jq -r '.paymentId')
 check_not_null "Record payment → paymentId"                        "$PAY1_ID"
 check          "Record payment → amount"          "350"            "$(echo "$PAY1" | jq -r '.amount')"
@@ -149,7 +151,7 @@ check          "After payment → paymentPending"     "false" "$(echo "$CUST_AFT
 check_not_null "After payment → next subscriptionStart"     "$(echo "$CUST_AFTER_PAY" | jq -r '.currentSubscriptionStart')"
 
 # Second payment with a different amount — new rate must carry forward
-PAY2=$(POST "/api/payments/$CUST_ID" '{"amount":400,"paymentMethod":"UPI"}')
+PAY2=$(POST "/api/payments/$CUST_ID" "{\"amount\":400,\"forMonth\":\"$NEXT_MONTH\",\"paymentMethod\":\"UPI\"}")
 check_not_null "Second payment (different amount) succeeds" "$(echo "$PAY2" | jq -r '.paymentId')"
 CUST_AFTER_PAY2=$(GET "/api/customers/$CUST_ID")
 check "currentPaymentAmount reflects new rate" "400.00" "$(echo "$CUST_AFTER_PAY2" | jq -r '.currentPaymentAmount')"
@@ -160,8 +162,8 @@ check "Payment in GET /payments/:customerId" "$PAY1_ID" "$PAY_IN_CUST_LIST"
 PAY_IN_ALL=$(GET "/api/payments" | jq -r ".[] | select(.paymentId == $PAY1_ID) | .paymentId")
 check "Payment in GET /payments" "$PAY1_ID" "$PAY_IN_ALL"
 
-TODAY=$(today)
-PAY_IN_TODAY=$(GET "/api/payments?from=$TODAY&to=$TODAY" | jq -r ".[] | select(.paymentId == $PAY1_ID) | .paymentId")
+PAY1_DATE=$(echo "$PAY1" | jq -r '.paymentDate')
+PAY_IN_TODAY=$(GET "/api/payments?from=$PAY1_DATE&to=$PAY1_DATE" | jq -r ".[] | select(.paymentId == $PAY1_ID) | .paymentId")
 check "Payment in date-range filter" "$PAY1_ID" "$PAY_IN_TODAY"
 
 # ── SUSPEND & REENROLL ────────────────────────────────────────

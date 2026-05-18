@@ -23,6 +23,10 @@ public class Area {
     @Column(name = "area_name", unique = true, nullable = false, length = 200)
     private String areaName;
 
+    // Day of the month (1–28) in the month following subscription end by which payment must be made
+    @Column(name = "grace_period_day", nullable = false)
+    private int gracePeriodDay = 5;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

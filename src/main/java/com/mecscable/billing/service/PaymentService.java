@@ -43,12 +43,17 @@ public class PaymentService {
             throw new IllegalArgumentException("Cannot record payment for a suspended customer");
         }
 
-        Subscription currentSub = subscriptionRepository
-                .findByCustomerAndStatusInOrderByStartDateDesc(customer,
-                        List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING))
+        // Find the subscription for the specified month
+        LocalDate firstOfMonth = request.forMonth().withDayOfMonth(1);
+        LocalDate lastOfMonth = firstOfMonth.withDayOfMonth(firstOfMonth.lengthOfMonth());
+        Subscription targetSub = subscriptionRepository
+                .findByCustomerAndStartDateBetween(customer, firstOfMonth, lastOfMonth)
                 .stream()
+                .filter(s -> List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING)
+                        .contains(s.getStatus()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No payable subscription found for customer"));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No payable subscription found for " + firstOfMonth.getMonth() + " " + firstOfMonth.getYear()));
 
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
@@ -57,7 +62,7 @@ public class PaymentService {
 
         Payment payment = new Payment();
         payment.setCustomer(customer);
-        payment.setSubscription(currentSub);
+        payment.setSubscription(targetSub);
         payment.setAmount(request.amount());
         payment.setPaymentDate(payDate);
         payment.setPaymentMethod(request.paymentMethod());
@@ -65,20 +70,26 @@ public class PaymentService {
         payment.setNotes(request.notes());
         payment = paymentRepository.save(payment);
 
-        currentSub.setStatus(SubscriptionStatus.PAID);
-        subscriptionRepository.save(currentSub);
+        targetSub.setStatus(SubscriptionStatus.PAID);
+        subscriptionRepository.save(targetSub);
 
-        LocalDate nextStart = currentSub.getEndDate().plusDays(1);
+        // Create the next month's subscription only if one doesn't already exist
+        LocalDate nextStart = targetSub.getEndDate().plusDays(1);
         LocalDate nextEnd = nextStart.withDayOfMonth(nextStart.lengthOfMonth());
-
-        Subscription nextSub = new Subscription();
-        nextSub.setCustomer(customer);
-        nextSub.setMonthlyRate(request.amount());
-        nextSub.setStartDate(nextStart);
-        nextSub.setEndDate(nextEnd);
-        nextSub.setStatus(SubscriptionStatus.ACTIVE);
-        nextSub.setEnrolledBy(admin);
-        subscriptionRepository.save(nextSub);
+        boolean nextExists = subscriptionRepository
+                .findByCustomerAndStartDateBetween(customer, nextStart, nextEnd)
+                .stream()
+                .anyMatch(s -> s.getStatus() != SubscriptionStatus.CANCELLED);
+        if (!nextExists) {
+            Subscription nextSub = new Subscription();
+            nextSub.setCustomer(customer);
+            nextSub.setMonthlyRate(request.amount());
+            nextSub.setStartDate(nextStart);
+            nextSub.setEndDate(nextEnd);
+            nextSub.setStatus(SubscriptionStatus.ACTIVE);
+            nextSub.setEnrolledBy(admin);
+            subscriptionRepository.save(nextSub);
+        }
 
         customer.setLastPaymentAmount(request.amount());
         customer.setLastPaymentDate(payDate);
@@ -90,7 +101,7 @@ public class PaymentService {
         customerRepository.save(customer);
 
         auditService.log(adminId, "RECORD_PAYMENT", "Payment", payment.getPaymentId(),
-                "{\"amount\":" + request.amount() + ",\"customerId\":" + customerId + "}");
+                "{\"amount\":" + request.amount() + ",\"forMonth\":\"" + firstOfMonth + "\",\"customerId\":" + customerId + "}");
 
         return toResponse(payment);
     }
@@ -119,11 +130,14 @@ public class PaymentService {
     private PaymentResponse toResponse(Payment p) {
         Customer c = p.getCustomer();
         Admin a = p.getRecordedBy();
+        Subscription sub = p.getSubscription();
+        LocalDate forMonth = sub != null ? sub.getStartDate().withDayOfMonth(1) : null;
         return new PaymentResponse(
                 p.getPaymentId(),
                 c.getCustomerId(),
                 c.getFirstName() + (c.getLastName() != null ? " " + c.getLastName() : ""),
-                p.getSubscription() != null ? p.getSubscription().getSubscriptionId() : null,
+                sub != null ? sub.getSubscriptionId() : null,
+                forMonth,
                 p.getAmount(),
                 p.getPaymentDate(),
                 p.getPaymentMethod(),

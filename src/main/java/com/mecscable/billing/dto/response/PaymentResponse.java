@@ -9,6 +9,7 @@ public record PaymentResponse(
         Long customerId,
         String customerName,
         Long subscriptionId,
+        LocalDate forMonth,
         BigDecimal amount,
         LocalDate paymentDate,
         String paymentMethod,

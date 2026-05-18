@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -19,7 +20,6 @@ public class BillingScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(BillingScheduler.class);
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
-    private static final int GRACE_DAYS = 5;
 
     private final SubscriptionRepository subscriptionRepository;
     private final CustomerRepository customerRepository;
@@ -61,13 +61,16 @@ public class BillingScheduler {
     }
 
     private int moveGraceToPaymentPending(LocalDate today) {
-        // Grace period is GRACE_DAYS after subscription end date
-        LocalDate graceCutoff = today.minusDays(GRACE_DAYS);
+        List<Subscription> graceSubscriptions = subscriptionRepository.findByStatus(SubscriptionStatus.GRACE);
+        int count = 0;
 
-        List<Subscription> graceExpired = subscriptionRepository
-                .findByStatusAndEndDateBefore(SubscriptionStatus.GRACE, graceCutoff);
+        for (Subscription sub : graceSubscriptions) {
+            int gracePeriodDay = sub.getCustomer().getArea().getGracePeriodDay();
+            // Grace deadline: area's grace day in the month following the subscription's end month
+            LocalDate graceDeadline = YearMonth.from(sub.getEndDate()).plusMonths(1).atDay(gracePeriodDay);
 
-        for (Subscription sub : graceExpired) {
+            if (!today.isAfter(graceDeadline)) continue;
+
             sub.setStatus(SubscriptionStatus.PAYMENT_PENDING);
             subscriptionRepository.save(sub);
 
@@ -78,9 +81,10 @@ public class BillingScheduler {
             auditService.logSystem("PAYMENT_PENDING", "Subscription",
                     sub.getSubscriptionId(), null);
 
-            log.debug("Subscription {} moved to PAYMENT_PENDING, customer {} flagged",
-                    sub.getSubscriptionId(), customer.getCustomerId());
+            log.debug("Subscription {} moved to PAYMENT_PENDING (grace deadline {}), customer {} flagged",
+                    sub.getSubscriptionId(), graceDeadline, customer.getCustomerId());
+            count++;
         }
-        return graceExpired.size();
+        return count;
     }
 }

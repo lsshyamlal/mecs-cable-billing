@@ -6,6 +6,7 @@ import java.time.LocalDate;
 public record PaymentReportRow(
         Long paymentId,
         LocalDate paymentDate,
+        LocalDate forMonth,
         Long customerId,
         String customerName,
         String areaName,
