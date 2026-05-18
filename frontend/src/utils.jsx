@@ -1,0 +1,39 @@
+export const STATUS_COLORS = {
+  ACTIVE: 'bg-green-100 text-green-800',
+  GRACE: 'bg-yellow-100 text-yellow-800',
+  PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
+  SUSPENDED: 'bg-red-100 text-red-800',
+  CANCELLED: 'bg-gray-100 text-gray-700',
+  PAID: 'bg-blue-100 text-blue-800',
+};
+
+export function StatusBadge({ status }) {
+  const colorClass = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700';
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colorClass}`}>
+      {status?.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+export function fmtDate(dateStr) {
+  if (!dateStr) return '—';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
+export function fmtDateTime(isoStr) {
+  if (!isoStr) return '—';
+  return new Date(isoStr).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  });
+}
+
+export function fmtCurrency(val) {
+  if (val == null) return '—';
+  return `₹${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
