@@ -2,31 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getSubscriptionHistory } from '../api';
-
-const STATUS_COLORS = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  GRACE: 'bg-yellow-100 text-yellow-800',
-  PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
-  SUSPENDED: 'bg-red-100 text-red-800',
-  CANCELLED: 'bg-gray-100 text-gray-700',
-  PAID: 'bg-blue-100 text-blue-800',
-};
-
-function fmtDate(dateStr) {
-  if (!dateStr) return '—';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-}
-
-function fmtMonth(dateStr) {
-  if (!dateStr) return '—';
-  const [year, month] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
-    month: 'long', year: 'numeric',
-  });
-}
+import { STATUS_COLORS, fmtDate, fmtMonth } from '../utils';
 
 export default function PortalHistory() {
   const [history, setHistory] = useState(null);

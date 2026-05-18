@@ -10,7 +10,7 @@ This project is in the **planning/design phase**. The repository currently conta
 
 - **Backend:** Java 17+ / Spring Boot 3.x, Spring Security + JWT, Spring Data JPA / Hibernate
 - **Frontend:** React 18.x, Tailwind CSS / Bootstrap
-- **Database:** PostgreSQL 14+ (all timestamps in UTC, displayed in IST)
+- **Database:** PostgreSQL 14+ (all timestamps in IST / Asia/Kolkata)
 - **Build:** Maven (`pom.xml` to be created)
 - **API Docs:** Springdoc-OpenAPI (Swagger UI at `/swagger-ui.html`)
 
@@ -22,8 +22,8 @@ Once source code is scaffolded:
 # Build (skip tests for a fast package)
 mvn clean package -DskipTests
 
-# Run (always set timezone to UTC at JVM level)
-java -Duser.timezone=UTC -jar target/mecs-billing.jar
+# Run
+java -Duser.timezone=Asia/Kolkata -jar target/mecs-billing.jar
 
 # Run tests
 mvn test

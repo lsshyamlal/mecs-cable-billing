@@ -2,40 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getProfile, getCurrentSubscription } from '../api';
-
-const STATUS_COLORS = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  GRACE: 'bg-yellow-100 text-yellow-800',
-  PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
-  SUSPENDED: 'bg-red-100 text-red-800',
-  CANCELLED: 'bg-gray-100 text-gray-700',
-  PAID: 'bg-blue-100 text-blue-800',
-};
-
-function StatusBadge({ status }) {
-  const colorClass = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700';
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colorClass}`}>
-      {status.replace(/_/g, ' ')}
-    </span>
-  );
-}
-
-function fmtDate(dateStr) {
-  if (!dateStr) return '—';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-}
-
-function fmtDateTime(isoStr) {
-  if (!isoStr) return '—';
-  return new Date(isoStr).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    timeZone: 'Asia/Kolkata',
-  });
-}
+import { StatusBadge, fmtDate, fmtDateTime } from '../utils';
 
 function Field({ label, value }) {
   return (
@@ -44,6 +11,16 @@ function Field({ label, value }) {
       <p className="text-sm font-medium text-gray-800">{value}</p>
     </div>
   );
+}
+
+function fmtExpiryInIST(isoStr) {
+  if (!isoStr) return null;
+  const expiry = new Date(isoStr);
+  expiry.setFullYear(expiry.getFullYear() + 2);
+  return expiry.toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
 }
 
 export default function PortalHome() {
@@ -83,10 +60,19 @@ export default function PortalHome() {
 
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
   const address = [profile.doorNumber, profile.streetName, profile.area].filter(Boolean).join(', ');
+  const portalAccessExpiry = fmtExpiryInIST(profile.suspendedAt);
 
   return (
     <Layout>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">My Account</h2>
+
+      {profile.status === 'SUSPENDED' && portalAccessExpiry && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-5 text-sm text-red-700">
+          <span className="font-semibold">Your account is suspended.</span> Your information is available in
+          read-only mode until <span className="font-semibold">{portalAccessExpiry}</span>.
+          Contact your cable operator to re-activate your subscription.
+        </div>
+      )}
 
       {/* Profile card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">

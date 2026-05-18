@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -137,6 +138,7 @@ public class CustomerService {
         }
         customer.setStatus(CustomerStatus.SUSPENDED);
         customer.setPaymentPending(false);
+        customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
         subscriptionRepository.findByCustomerAndStatus(customer, SubscriptionStatus.ACTIVE)
@@ -157,6 +159,7 @@ public class CustomerService {
 
         customer.setStatus(CustomerStatus.ACTIVE);
         customer.setPaymentPending(false);
+        customer.setSuspendedAt(null);
         customerRepository.save(customer);
 
         createSubscription(customer, request.monthlyRate(), request.startDate(), adminId);

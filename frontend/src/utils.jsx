@@ -16,11 +16,22 @@ export function StatusBadge({ status }) {
   );
 }
 
+const IST = 'Asia/Kolkata';
+
 export function fmtDate(dateStr) {
   if (!dateStr) return '—';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+  // Append IST offset so the date is never shifted by UTC conversion
+  return new Date(dateStr + 'T00:00:00+05:30').toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
+    timeZone: IST,
+  });
+}
+
+export function fmtMonth(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr + 'T00:00:00+05:30').toLocaleDateString('en-IN', {
+    month: 'long', year: 'numeric',
+    timeZone: IST,
   });
 }
 
@@ -29,7 +40,7 @@ export function fmtDateTime(isoStr) {
   return new Date(isoStr).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
-    timeZone: 'Asia/Kolkata',
+    timeZone: IST,
   });
 }
 

@@ -13,5 +13,6 @@ public record PortalProfileResponse(
         String email,
         String stbId,
         String status,
-        OffsetDateTime accountCreatedAt
+        OffsetDateTime accountCreatedAt,
+        OffsetDateTime suspendedAt
 ) {}

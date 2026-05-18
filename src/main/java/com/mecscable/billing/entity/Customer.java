@@ -85,6 +85,9 @@ public class Customer {
     @Column(name = "current_subscription_end")
     private LocalDate currentSubscriptionEnd;
 
+    @Column(name = "suspended_at")
+    private OffsetDateTime suspendedAt;
+
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 

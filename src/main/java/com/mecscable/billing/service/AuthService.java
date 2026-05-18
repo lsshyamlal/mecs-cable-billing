@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -101,7 +102,7 @@ public class AuthService {
         if (!admin.isActive()) {
             throw new DisabledException("Admin account is disabled");
         }
-        admin.setLastLoginAt(OffsetDateTime.now());
+        admin.setLastLoginAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         adminRepository.save(admin);
 
         String accessToken = jwtService.generateAccessToken(admin.getEmail(), "ROLE_ADMIN", admin.getAdminId());
@@ -116,7 +117,14 @@ public class AuthService {
             throw new BadCredentialsException("Invalid credentials");
         }
         if (customer.getStatus() != CustomerStatus.ACTIVE) {
-            throw new DisabledException("Customer account is suspended");
+            if (customer.getStatus() == CustomerStatus.SUSPENDED
+                    && (customer.getSuspendedAt() == null
+                        || customer.getSuspendedAt().plusYears(2).isAfter(OffsetDateTime.now(ZoneId.of("Asia/Kolkata"))))) {
+                // suspended but within 2-year read-only access window — allow login
+                // null suspendedAt means suspended before tracking was added; grant access
+            } else {
+                throw new DisabledException("Customer account is not accessible");
+            }
         }
 
         String accessToken = jwtService.generateAccessToken(

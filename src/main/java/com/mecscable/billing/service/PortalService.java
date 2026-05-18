@@ -43,7 +43,8 @@ public class PortalService {
                 c.getEmail(),
                 c.getStbId(),
                 c.getStatus().name(),
-                c.getAccountCreatedAt()
+                c.getAccountCreatedAt(),
+                c.getSuspendedAt()
         );
     }
 
