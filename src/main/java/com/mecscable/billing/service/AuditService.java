@@ -23,4 +23,15 @@ public class AuditService {
         entry.setDetails(details);
         auditLogRepository.save(entry);
     }
+
+    public void logSystem(String action, String entityType, Long entityId, String details) {
+        AuditLog entry = new AuditLog();
+        entry.setActorId(0L);
+        entry.setActorRole("SYSTEM");
+        entry.setAction(action);
+        entry.setEntityType(entityType);
+        entry.setEntityId(entityId);
+        entry.setDetails(details);
+        auditLogRepository.save(entry);
+    }
 }

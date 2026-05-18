@@ -192,6 +192,45 @@ check "Reenroll → status ACTIVE" "ACTIVE" "$(echo "$REENROLL" | jq -r '.status
 check "Cannot reenroll active customer → 400" "400" \
   "$(STATUS_PUT "/api/customers/$CUST_ID/reenroll" "{\"monthlyRate\":350,\"startDate\":\"$NEXT_START\"}")"
 
+# ── SCHEDULER ────────────────────────────────────────────────
+
+section "SCHEDULER"
+
+# Customer with subscription from 2 months ago:
+#   end_date = last day of that month (well in the past, >5 days ago)
+#   → scheduler should move it ACTIVE→GRACE→PAYMENT_PENDING in one run
+TWO_MONTHS_AGO=$(date -v1d -v-2m +%Y-%m-%d)
+CUST_OLD=$(POST "/api/customers" \
+  "{\"firstName\":\"SchedOld\",\"lastName\":\"Test\",\"doorNumber\":\"S1\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000097\",\"monthlyRate\":200,\"subscriptionStartDate\":\"$TWO_MONTHS_AGO\"}")
+CUST_OLD_ID=$(echo "$CUST_OLD" | jq -r '.customerId')
+check_not_null "Create old-subscription customer"                 "$CUST_OLD_ID"
+check "Old customer: initial paymentPending is false" "false"     "$(echo "$CUST_OLD" | jq -r '.paymentPending')"
+
+# Customer with subscription starting this month — must not be touched by scheduler
+CUST_CURR_SCHED=$(POST "/api/customers" \
+  "{\"firstName\":\"SchedCurr\",\"lastName\":\"Test\",\"doorNumber\":\"S2\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000096\",\"monthlyRate\":200,\"subscriptionStartDate\":\"$THIS_MONTH\"}")
+CUST_CURR_SCHED_ID=$(echo "$CUST_CURR_SCHED" | jq -r '.customerId')
+check_not_null "Create current-subscription customer"             "$CUST_CURR_SCHED_ID"
+
+# Trigger scheduler manually
+check "Scheduler trigger → 200" "200" "$(STATUS_POST "/api/admin/scheduler/run" "")"
+
+# Old subscription: should now be PAYMENT_PENDING (passed through GRACE in same run)
+CUST_OLD_AFTER=$(GET "/api/customers/$CUST_OLD_ID")
+check "Old subscription → paymentPending true"   "true"   "$(echo "$CUST_OLD_AFTER" | jq -r '.paymentPending')"
+check "Old subscription → customer still ACTIVE" "ACTIVE" "$(echo "$CUST_OLD_AFTER" | jq -r '.status')"
+
+# Current subscription: must be unaffected
+CUST_CURR_AFTER=$(GET "/api/customers/$CUST_CURR_SCHED_ID")
+check "Current subscription → paymentPending still false" "false" "$(echo "$CUST_CURR_AFTER" | jq -r '.paymentPending')"
+
+# Cleanup scheduler test customers
+STATUS_PUT_NOBODY "/api/customers/$CUST_OLD_ID/suspend" > /dev/null
+DELETE_REQ "/api/customers/$CUST_OLD_ID" > /dev/null
+STATUS_PUT_NOBODY "/api/customers/$CUST_CURR_SCHED_ID/suspend" > /dev/null
+DELETE_REQ "/api/customers/$CUST_CURR_SCHED_ID" > /dev/null
+pass "Scheduler test customers cleaned up"
+
 # ── CLEANUP ──────────────────────────────────────────────────
 
 section "CLEANUP"
