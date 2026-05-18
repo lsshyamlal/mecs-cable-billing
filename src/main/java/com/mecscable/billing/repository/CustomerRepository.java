@@ -23,4 +23,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     long countByStatus(CustomerStatus status);
 
     long countByPaymentPendingTrue();
+
+    Optional<Customer> findByPhone(String phone);
+
+    Optional<Customer> findByEmail(String email);
+
+    Optional<Customer> findByPhoneOrEmail(String phone, String email);
 }

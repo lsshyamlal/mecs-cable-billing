@@ -85,6 +85,9 @@ public class Customer {
     @Column(name = "current_subscription_end")
     private LocalDate currentSubscriptionEnd;
 
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
