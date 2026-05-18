@@ -59,7 +59,7 @@ export default function PortalHome() {
   }
 
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
-  const address = [profile.doorNumber, profile.streetName, profile.area].filter(Boolean).join(', ');
+  const address = [profile.doorNumber, profile.streetName].filter(Boolean).join(', ');
   const portalAccessExpiry = fmtExpiryInIST(profile.suspendedAt);
 
   return (
@@ -83,6 +83,7 @@ export default function PortalHome() {
           <Field label="Email" value={profile.email || '—'} />
           <Field label="STB ID" value={profile.stbId || '—'} />
           <Field label="Address" value={address || '—'} />
+          <Field label="Area" value={profile.area || '—'} />
           <Field label="Member Since" value={fmtDateTime(profile.accountCreatedAt)} />
           <div>
             <p className="text-xs text-gray-500 mb-1">Account Status</p>
