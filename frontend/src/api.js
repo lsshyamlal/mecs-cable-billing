@@ -11,7 +11,7 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && !original._retry && original.url !== '/auth/login') {
       if (isRefreshing) return Promise.reject(error);
       original._retry = true;
       isRefreshing = true;

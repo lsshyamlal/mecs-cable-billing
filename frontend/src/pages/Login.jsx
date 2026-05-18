@@ -18,6 +18,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    if (sessionExpired) navigate('/login', { replace: true });
     try {
       const res = await login(identifier, password);
       signIn(res.data);
