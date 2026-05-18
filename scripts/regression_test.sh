@@ -85,14 +85,14 @@ if [ -n "$EXISTING_AREA_ID" ] && [ "$EXISTING_AREA_ID" != "null" ]; then
   AREA_ID="$EXISTING_AREA_ID"
   pass "Reusing existing Regression Test Area (ID: $AREA_ID)"
 else
-  CREATE_AREA=$(POST "/api/areas" '{"areaName":"Regression Test Area"}')
+  CREATE_AREA=$(POST "/api/areas" '{"areaName":"Regression Test Area","gracePeriodDay":10}')
   AREA_ID=$(echo "$CREATE_AREA" | jq -r '.areaId')
   check_not_null "Create area → areaId"                           "$AREA_ID"
   check          "Create area → name" "Regression Test Area"      "$(echo "$CREATE_AREA" | jq -r '.areaName')"
 fi
 
 check "Duplicate area → 400" "400" \
-  "$(STATUS_POST "/api/areas" '{"areaName":"Regression Test Area"}')"
+  "$(STATUS_POST "/api/areas" '{"areaName":"Regression Test Area","gracePeriodDay":10}')"
 
 AREA_IN_LIST=$(GET "/api/areas" | jq -r ".[] | select(.areaId == $AREA_ID) | .areaName")
 check "Area in GET /areas list" "Regression Test Area" "$AREA_IN_LIST"
