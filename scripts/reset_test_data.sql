@@ -16,7 +16,12 @@
 --                       (deadline May 25, today May 18 → still in window)
 --   4. Meera Pillai  — South Town — Apr subscription PAYMENT_PENDING
 --                       (deadline May 10, today May 18 → window closed)
---   5. Suresh Menon  — South Town — SUSPENDED (never paid Mar, account suspended)
+--   5. Suresh Menon  — South Town — SUSPENDED 2026-04-10 (6 weeks ago)
+--                       suspended_at + 2 years = 2028-04-10 → PORTAL LOGIN ALLOWED
+--   6. Kavita Rao    — North Town — SUSPENDED 2024-05-17 (2 years + 1 day ago)
+--                       suspended_at + 2 years = 2026-05-17 < today → PORTAL LOGIN BLOCKED
+--   7. Deepak Iyer   — South Town — SUSPENDED 2024-06-18 (≈ 23 months ago)
+--                       suspended_at + 2 years = 2026-06-18 > today → PORTAL LOGIN ALLOWED
 -- =============================================================
 
 -- ---------------------------------------------------------------
@@ -132,11 +137,11 @@ INSERT INTO customers (
 -- customer_id = 4
 
 -- 5. Suresh Menon — South Town (grace day 10)
---    Never paid March; account suspended
+--    Never paid March; suspended 2026-04-10 → 2 yr window expires 2028-04-10 → LOGIN ALLOWED
 INSERT INTO customers (
     first_name, last_name, door_number, street_name, area_id,
     phone, email, upi_id, stb_id,
-    status, password_hash,
+    status, suspended_at, password_hash,
     last_payment_amount, last_payment_date,
     current_payment_amount, current_payment_date,
     current_payment_due_date, is_payment_pending,
@@ -144,7 +149,8 @@ INSERT INTO customers (
 ) VALUES (
     'Suresh', 'Menon', '88', 'Park Avenue', 2,
     '9876543005', 'suresh.menon@example.com', 'suresh@upi', 'STB-005',
-    'SUSPENDED', '$2b$10$aBgS5v.RSXnSDI.Wuu06Aul0MK/RP.ej/NtVEeX1ZUbSQh3UjLq4m',
+    'SUSPENDED', '2026-04-10 00:00:00+05:30',
+    '$2b$10$aBgS5v.RSXnSDI.Wuu06Aul0MK/RP.ej/NtVEeX1ZUbSQh3UjLq4m',
     290.00, '2026-02-06',
     290.00, NULL,
     NULL, FALSE,
@@ -219,17 +225,91 @@ INSERT INTO payments (customer_id, subscription_id, amount, payment_date, paymen
     (5, 14, 290.00, '2026-01-09', 'CASH', 1),
     (5, 15, 290.00, '2026-02-06', 'CASH', 1);
 
+-- 6. Kavita Rao — North Town (grace day 25)
+--    Suspended 2024-05-17 → 2 yr window expired 2026-05-17 (yesterday) → LOGIN BLOCKED
+INSERT INTO customers (
+    first_name, last_name, door_number, street_name, area_id,
+    phone, email, upi_id, stb_id,
+    status, suspended_at, password_hash,
+    last_payment_amount, last_payment_date,
+    current_payment_amount, current_payment_date,
+    current_payment_due_date, is_payment_pending,
+    current_subscription_start, current_subscription_end
+) VALUES (
+    'Kavita', 'Rao', '5', 'Hill Road', 1,
+    '9876543006', 'kavita.rao@example.com', 'kavita@upi', NULL,
+    'SUSPENDED', '2024-05-17 00:00:00+05:30',
+    '$2b$10$aBgS5v.RSXnSDI.Wuu06Aul0MK/RP.ej/NtVEeX1ZUbSQh3UjLq4m',
+    250.00, '2024-04-05',
+    250.00, NULL,
+    NULL, FALSE,
+    '2024-04-01', '2024-04-30'
+);
+-- customer_id = 6
+
+-- 7. Deepak Iyer — South Town (grace day 10)
+--    Suspended 2024-06-18 → 2 yr window expires 2026-06-18 (31 days away) → LOGIN ALLOWED
+INSERT INTO customers (
+    first_name, last_name, door_number, street_name, area_id,
+    phone, email, upi_id, stb_id,
+    status, suspended_at, password_hash,
+    last_payment_amount, last_payment_date,
+    current_payment_amount, current_payment_date,
+    current_payment_due_date, is_payment_pending,
+    current_subscription_start, current_subscription_end
+) VALUES (
+    'Deepak', 'Iyer', '67', 'River Road', 2,
+    '9876543007', 'deepak.iyer@example.com', 'deepak@upi', NULL,
+    'SUSPENDED', '2024-06-18 00:00:00+05:30',
+    '$2b$10$aBgS5v.RSXnSDI.Wuu06Aul0MK/RP.ej/NtVEeX1ZUbSQh3UjLq4m',
+    310.00, '2024-05-11',
+    310.00, NULL,
+    NULL, FALSE,
+    '2024-05-01', '2024-05-31'
+);
+-- customer_id = 7
+
+-- ---------------------------------------------------------------
+-- Subscriptions for Kavita Rao (customer_id = 6)
+-- ---------------------------------------------------------------
+INSERT INTO subscriptions (customer_id, monthly_rate, start_date, end_date, status, enrolled_by) VALUES
+    (6, 250.00, '2024-02-01', '2024-02-29', 'PAID',      1),
+    (6, 250.00, '2024-03-01', '2024-03-31', 'PAID',      1),
+    (6, 250.00, '2024-04-01', '2024-04-30', 'CANCELLED', 1);
+
+-- Subscriptions for Deepak Iyer (customer_id = 7)
+INSERT INTO subscriptions (customer_id, monthly_rate, start_date, end_date, status, enrolled_by) VALUES
+    (7, 310.00, '2024-03-01', '2024-03-31', 'PAID',      1),
+    (7, 310.00, '2024-04-01', '2024-04-30', 'PAID',      1),
+    (7, 310.00, '2024-05-01', '2024-05-31', 'CANCELLED', 1);
+
+-- Payments for Kavita Rao
+INSERT INTO payments (customer_id, subscription_id, amount, payment_date, payment_method, recorded_by)
+SELECT 6, subscription_id, 250.00, start_date + 5, 'CASH', 1
+FROM subscriptions WHERE customer_id = 6 AND status = 'PAID';
+
+-- Payments for Deepak Iyer
+INSERT INTO payments (customer_id, subscription_id, amount, payment_date, payment_method, recorded_by)
+SELECT 7, subscription_id, 310.00, start_date + 10, 'UPI', 1
+FROM subscriptions WHERE customer_id = 7 AND status = 'PAID';
+
 -- ---------------------------------------------------------------
 -- Verify
 -- ---------------------------------------------------------------
 SELECT
-    c.first_name || ' ' || c.last_name                  AS customer,
-    a.area_name || ' (grace day ' || a.grace_period_day || ')'  AS area,
-    c.status                                             AS account_status,
-    s.status                                             AS subscription_status,
-    s.start_date, s.end_date
+    c.first_name || ' ' || c.last_name                            AS customer,
+    c.phone,
+    c.status                                                       AS account_status,
+    c.suspended_at AT TIME ZONE 'Asia/Kolkata'                    AS suspended_at_ist,
+    CASE
+        WHEN c.suspended_at IS NULL                               THEN 'n/a'
+        WHEN c.suspended_at + INTERVAL '2 years'
+             > NOW() AT TIME ZONE 'Asia/Kolkata'                  THEN 'PORTAL ALLOWED (until ' ||
+             TO_CHAR((c.suspended_at + INTERVAL '2 years')
+                     AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY') || ')'
+        ELSE                                                           'PORTAL BLOCKED (expired ' ||
+             TO_CHAR((c.suspended_at + INTERVAL '2 years')
+                     AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY') || ')'
+    END                                                            AS portal_access
 FROM customers c
-JOIN areas a ON a.area_id = c.area_id
-LEFT JOIN subscriptions s ON s.customer_id = c.customer_id
-    AND s.end_date = c.current_subscription_end
 ORDER BY c.customer_id;
