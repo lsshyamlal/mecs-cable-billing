@@ -83,6 +83,7 @@ export default function PortalHistory() {
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Period</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Rate</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Status</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Grace Deadline</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Paid On</th>
                 </tr>
               </thead>
@@ -97,6 +98,7 @@ export default function PortalHistory() {
                         {item.status.replace(/_/g, ' ')}
                       </span>
                     </td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDate(item.gracePeriodDeadline)}</td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDate(item.paymentDate)}</td>
                   </tr>
                 ))}

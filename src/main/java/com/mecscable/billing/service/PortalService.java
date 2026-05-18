@@ -69,6 +69,7 @@ public class PortalService {
     public List<PortalSubscriptionHistoryItem> getSubscriptionHistory(Long customerId) {
         Customer c = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        int gracePeriodDay = c.getArea().getGracePeriodDay();
         LocalDate since = LocalDate.now().minusMonths(12);
         return subscriptionRepository
                 .findByCustomerAndStartDateAfterOrderByStartDateDesc(c, since)
@@ -78,13 +79,15 @@ public class PortalService {
                             .findFirstBySubscriptionOrderByPaymentDateDesc(s)
                             .map(p -> p.getPaymentDate())
                             .orElse(null);
+                    LocalDate gracePeriodDeadline = YearMonth.from(s.getEndDate()).plusMonths(1).atDay(gracePeriodDay);
                     return new PortalSubscriptionHistoryItem(
                             s.getSubscriptionId(),
                             s.getStartDate(),
                             s.getEndDate(),
                             s.getMonthlyRate(),
                             s.getStatus().name(),
-                            paymentDate
+                            paymentDate,
+                            gracePeriodDeadline
                     );
                 })
                 .toList();

@@ -9,5 +9,6 @@ public record PortalSubscriptionHistoryItem(
         LocalDate endDate,
         BigDecimal monthlyRate,
         String status,
-        LocalDate paymentDate
+        LocalDate paymentDate,
+        LocalDate gracePeriodDeadline
 ) {}
