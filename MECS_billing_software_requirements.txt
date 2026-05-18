@@ -1,0 +1,85 @@
+Cable TV Software Development
+
+
+Requirements:
+1. To develop a Billing software for my Dad’s Cable TV business
+2. There must be no to very minimal expenses on a regular basis for this software operation and maintenance (eg cloud provider expense, DB expense etc)
+3. The software should be functioning in IST timezone even if the software itself is used in other timezones
+4. The software should be a Web application (mobile app in future scope)
+5. The application must have a decent, simple and clear UI
+6. The application must have a robust backend application (can we do a java app?) with the appropriate DB implementation (any open source DB).
+7. The DB must be taken snapshots every day at 3am IST
+8. The application should be accessed from any where in the world.
+9.  The application must be hosted on a server which will be my laptop (the server in the laptop will be running 24/7 with regular scheduled maintenance every day)
+10. The entire software must have a very good security mechanism and should not be easily hacked or exploited.
+11. The end to end system must be easy to maintain by any computer science college student.
+12. The end to end system must be open to new requirements in the future with minimal changes.
+
+
+1. Cable TV billing system - Basic functionalities
+    1. Sign-up & login page:
+        1. for admin
+        2. For customers
+    2. Current state: Only the admin can login
+    3. New state: admin, employees, and customers can login
+    4. Add new customer
+    5. Update existing customer
+    6. New monthly subscription - purchase
+        1. For new customer: bill starts from any subscribed date until the end of that month
+    7. Existing monthly subscription purchase
+        1. For existing customer: bill starts from 1st of that month until end of that month
+    8. Monthly subscription - cancellation
+        1. For existing customer:
+            1. will the subscription keep running until the month end and then stops?
+            2. Or calculate the payment amount until the date of cancellation ?
+    9. Pending payment list generation
+        1. Date + Area wise payment list generation
+        2. Date wise (all area) payment list generation
+    10. Export data (in CSV or Excel format)
+        1. Customer list
+            1. Per area wise
+            2. Per any month for last 5 years
+            3. What information must be exported ?
+        2. Payment list
+            1. Per area wise
+            2. Per any month for last 5 years
+            3. What information must be exported ?
+        3. Pending payment list
+            1. Date + Area wise
+            2. Date wise (all area)
+            3. Per any month for last 5 years
+            4. What information must be exported ?
+
+
+How the Entities data are stored in DB??
+Admin details:
+1. Admin ID (unique)
+2. First name (mandatory)
+3. Last name
+4. Password (hashed)
+5. What other data can be stored about the admin
+
+Customer details:
+1. Customer ID (unique number)
+2. First name (mandatory)
+3. Last name
+4. Address (mandatory)
+    1. Door number, street name
+    2. Area -> dropdown
+5. Phone number (mandatory)
+6. emailID
+7. UPI ID for monthly payment collection request
+8. Set-up box ID -> is it unique or can be re-asssigned??
+9. Account create date
+10. Last payment amount
+11. Last payment date
+12. current payment amount
+13. current payment date
+14. Current payment due date
+15. Is Current payment pending (true/false)
+16. Current subscription start date
+17. Current subscription end date
+
+
+
+
