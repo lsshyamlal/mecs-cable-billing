@@ -1,0 +1,22 @@
+package com.mecscable.billing.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public record CreateCustomerRequest(
+        @NotBlank(message = "First name is required") String firstName,
+        String lastName,
+        String doorNumber,
+        String streetName,
+        @NotNull(message = "Area is required") Long areaId,
+        @NotBlank(message = "Phone is required") String phone,
+        String email,
+        String upiId,
+        String stbId,
+        String portalPassword,
+        @NotNull(message = "Monthly rate is required") BigDecimal monthlyRate,
+        LocalDate subscriptionStartDate
+) {}

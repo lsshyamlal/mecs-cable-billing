@@ -1,0 +1,247 @@
+package com.mecscable.billing.service;
+
+import com.mecscable.billing.dto.request.CreateCustomerRequest;
+import com.mecscable.billing.dto.request.EnrollmentRequest;
+import com.mecscable.billing.dto.request.UpdateCustomerRequest;
+import com.mecscable.billing.dto.response.CustomerResponse;
+import com.mecscable.billing.entity.*;
+import com.mecscable.billing.exception.ResourceNotFoundException;
+import com.mecscable.billing.repository.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class CustomerService {
+
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+
+    private final CustomerRepository customerRepository;
+    private final AreaRepository areaRepository;
+    private final AdminRepository adminRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PaymentRepository paymentRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
+
+    public CustomerService(CustomerRepository customerRepository,
+                           AreaRepository areaRepository,
+                           AdminRepository adminRepository,
+                           SubscriptionRepository subscriptionRepository,
+                           PaymentRepository paymentRepository,
+                           PasswordEncoder passwordEncoder,
+                           AuditService auditService) {
+        this.customerRepository = customerRepository;
+        this.areaRepository = areaRepository;
+        this.adminRepository = adminRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.paymentRepository = paymentRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
+    }
+
+    public List<CustomerResponse> listCustomers(String status, Long areaId) {
+        List<Customer> customers;
+
+        if (status != null && areaId != null) {
+            Area area = findArea(areaId);
+            customers = customerRepository.findByAreaAndStatus(area, CustomerStatus.valueOf(status));
+        } else if (status != null) {
+            customers = customerRepository.findByStatus(CustomerStatus.valueOf(status));
+        } else if (areaId != null) {
+            customers = customerRepository.findByArea(findArea(areaId));
+        } else {
+            customers = customerRepository.findAll();
+        }
+
+        return customers.stream().map(this::toResponse).toList();
+    }
+
+    public CustomerResponse getCustomer(Long customerId) {
+        return toResponse(findCustomer(customerId));
+    }
+
+    @Transactional
+    public CustomerResponse createCustomer(CreateCustomerRequest request, Long adminId) {
+        Area area = findArea(request.areaId());
+
+        if (request.stbId() != null && !request.stbId().isBlank()) {
+            customerRepository.findByStbIdAndStatus(request.stbId(), CustomerStatus.ACTIVE)
+                    .ifPresent(c -> { throw new IllegalArgumentException("STB ID already assigned to an active customer"); });
+        }
+
+        Customer customer = new Customer();
+        customer.setFirstName(request.firstName());
+        customer.setLastName(request.lastName());
+        customer.setDoorNumber(request.doorNumber());
+        customer.setStreetName(request.streetName());
+        customer.setArea(area);
+        customer.setPhone(request.phone());
+        customer.setEmail(request.email());
+        customer.setUpiId(request.upiId());
+        customer.setStbId(request.stbId());
+        customer.setStatus(CustomerStatus.ACTIVE);
+
+        if (request.portalPassword() != null && !request.portalPassword().isBlank()) {
+            customer.setPasswordHash(passwordEncoder.encode(request.portalPassword()));
+        }
+
+        customer = customerRepository.save(customer);
+
+        createSubscription(customer, request.monthlyRate(), request.subscriptionStartDate(), adminId);
+
+        auditService.log(adminId, "CREATE_CUSTOMER", "Customer", customer.getCustomerId(), null);
+        return toResponse(customerRepository.findById(customer.getCustomerId()).orElseThrow());
+    }
+
+    @Transactional
+    public CustomerResponse updateCustomer(Long customerId, UpdateCustomerRequest request, Long adminId) {
+        Customer customer = findCustomer(customerId);
+
+        if (request.firstName() != null) customer.setFirstName(request.firstName());
+        if (request.lastName() != null) customer.setLastName(request.lastName());
+        if (request.doorNumber() != null) customer.setDoorNumber(request.doorNumber());
+        if (request.streetName() != null) customer.setStreetName(request.streetName());
+        if (request.phone() != null) customer.setPhone(request.phone());
+        if (request.email() != null) customer.setEmail(request.email());
+        if (request.upiId() != null) customer.setUpiId(request.upiId());
+
+        if (request.stbId() != null) {
+            if (!request.stbId().isBlank()) {
+                customerRepository.findByStbIdAndStatus(request.stbId(), CustomerStatus.ACTIVE)
+                        .filter(c -> !c.getCustomerId().equals(customerId))
+                        .ifPresent(c -> { throw new IllegalArgumentException("STB ID already assigned to an active customer"); });
+            }
+            customer.setStbId(request.stbId().isBlank() ? null : request.stbId());
+        }
+
+        if (request.areaId() != null) {
+            customer.setArea(findArea(request.areaId()));
+        }
+
+        customer = customerRepository.save(customer);
+        auditService.log(adminId, "UPDATE_CUSTOMER", "Customer", customerId, null);
+        return toResponse(customer);
+    }
+
+    @Transactional
+    public void suspendCustomer(Long customerId, Long adminId) {
+        Customer customer = findCustomer(customerId);
+        if (customer.getStatus() == CustomerStatus.SUSPENDED) {
+            throw new IllegalArgumentException("Customer is already suspended");
+        }
+        customer.setStatus(CustomerStatus.SUSPENDED);
+        customer.setPaymentPending(false);
+        customerRepository.save(customer);
+
+        subscriptionRepository.findByCustomerAndStatus(customer, SubscriptionStatus.ACTIVE)
+                .ifPresent(sub -> {
+                    sub.setStatus(SubscriptionStatus.CANCELLED);
+                    subscriptionRepository.save(sub);
+                });
+
+        auditService.log(adminId, "SUSPEND_CUSTOMER", "Customer", customerId, null);
+    }
+
+    @Transactional
+    public CustomerResponse reEnrollCustomer(Long customerId, EnrollmentRequest request, Long adminId) {
+        Customer customer = findCustomer(customerId);
+        if (customer.getStatus() != CustomerStatus.SUSPENDED) {
+            throw new IllegalArgumentException("Customer is not suspended");
+        }
+
+        customer.setStatus(CustomerStatus.ACTIVE);
+        customer.setPaymentPending(false);
+        customerRepository.save(customer);
+
+        createSubscription(customer, request.monthlyRate(), request.startDate(), adminId);
+
+        auditService.log(adminId, "REENROLL_CUSTOMER", "Customer", customerId, null);
+        return toResponse(customerRepository.findById(customerId).orElseThrow());
+    }
+
+    @Transactional
+    public void resetPassword(Long customerId, String newPassword, Long adminId) {
+        Customer customer = findCustomer(customerId);
+        customer.setPasswordHash(passwordEncoder.encode(newPassword));
+        customerRepository.save(customer);
+        auditService.log(adminId, "RESET_CUSTOMER_PASSWORD", "Customer", customerId, null);
+    }
+
+    @Transactional
+    public void deleteCustomer(Long customerId, Long adminId) {
+        Customer customer = findCustomer(customerId);
+        if (customer.getStatus() == CustomerStatus.ACTIVE) {
+            throw new IllegalArgumentException("Cannot delete an active customer — suspend first");
+        }
+        paymentRepository.deleteAll(paymentRepository.findByCustomerOrderByPaymentDateDesc(customer));
+        subscriptionRepository.deleteAll(subscriptionRepository.findByCustomerOrderByStartDateDesc(customer));
+        customerRepository.delete(customer);
+        auditService.log(adminId, "DELETE_CUSTOMER", "Customer", customerId, null);
+    }
+
+    private void createSubscription(Customer customer, java.math.BigDecimal monthlyRate,
+                                    LocalDate startDate, Long adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
+
+        LocalDate start = startDate != null ? startDate : LocalDate.now(IST);
+        LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+
+        Subscription sub = new Subscription();
+        sub.setCustomer(customer);
+        sub.setMonthlyRate(monthlyRate);
+        sub.setStartDate(start);
+        sub.setEndDate(end);
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setEnrolledBy(admin);
+        subscriptionRepository.save(sub);
+
+        customer.setCurrentSubscriptionStart(start);
+        customer.setCurrentSubscriptionEnd(end);
+        customer.setCurrentPaymentAmount(monthlyRate);
+        customer.setCurrentPaymentDueDate(end);
+        customerRepository.save(customer);
+    }
+
+    private Customer findCustomer(Long customerId) {
+        return customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + customerId));
+    }
+
+    private Area findArea(Long areaId) {
+        return areaRepository.findById(areaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Area not found: " + areaId));
+    }
+
+    private CustomerResponse toResponse(Customer c) {
+        return new CustomerResponse(
+                c.getCustomerId(),
+                c.getFirstName(),
+                c.getLastName(),
+                c.getDoorNumber(),
+                c.getStreetName(),
+                c.getArea().getAreaId(),
+                c.getArea().getAreaName(),
+                c.getPhone(),
+                c.getEmail(),
+                c.getUpiId(),
+                c.getStbId(),
+                c.getStatus().name(),
+                c.isPaymentPending(),
+                c.getLastPaymentAmount(),
+                c.getLastPaymentDate(),
+                c.getCurrentPaymentAmount(),
+                c.getCurrentPaymentDate(),
+                c.getCurrentPaymentDueDate(),
+                c.getCurrentSubscriptionStart(),
+                c.getCurrentSubscriptionEnd(),
+                c.getAccountCreatedAt()
+        );
+    }
+}

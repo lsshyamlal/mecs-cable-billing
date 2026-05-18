@@ -1,0 +1,29 @@
+package com.mecscable.billing.dto.response;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+
+public record CustomerResponse(
+        Long customerId,
+        String firstName,
+        String lastName,
+        String doorNumber,
+        String streetName,
+        Long areaId,
+        String areaName,
+        String phone,
+        String email,
+        String upiId,
+        String stbId,
+        String status,
+        boolean paymentPending,
+        BigDecimal lastPaymentAmount,
+        LocalDate lastPaymentDate,
+        BigDecimal currentPaymentAmount,
+        LocalDate currentPaymentDate,
+        LocalDate currentPaymentDueDate,
+        LocalDate currentSubscriptionStart,
+        LocalDate currentSubscriptionEnd,
+        OffsetDateTime accountCreatedAt
+) {}
