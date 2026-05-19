@@ -73,7 +73,7 @@ All timestamps stored as UTC; business logic and display convert to IST (`Asia/K
 ## Critical Business Rules
 
 - **Billing period:** New customers billed from enrollment date to month-end (no pro-rata). Existing customers billed 1st–last of month.
-- **Grace period:** 5 days after subscription end before status becomes PAYMENT\_PENDING. A scheduled job runs at 3 AM IST daily to advance statuses.
+- **Grace period:** Payment is due on the subscription start date (1st of the month for recurring customers). Each area has a configurable `gracePeriodDay` (day-of-month). The scheduler at 3 AM IST: (1) moves ACTIVE subscriptions to GRACE on their start date, (2) moves GRACE subscriptions to PAYMENT\_PENDING once `today` is past `gracePeriodDay` of the subscription's start month. Service is suspended immediately upon PAYMENT\_PENDING.
 - **No auto-renewal:** Admin records each monthly payment manually.
 - **Cancellation:** Subscription runs to month-end, then auto-suspends. No pro-rata refund.
 - **STB ID uniqueness:** Unique only among ACTIVE customers (partial unique index); can be reassigned to a new customer after the original is suspended.

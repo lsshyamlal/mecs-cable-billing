@@ -48,16 +48,17 @@ public class BillingScheduler {
     }
 
     private int moveActiveToGrace(LocalDate today) {
-        List<Subscription> expired = subscriptionRepository
-                .findByStatusAndEndDateBefore(SubscriptionStatus.ACTIVE, today);
+        // Payment is due on the subscription start date; catches late-day enrollments via <=
+        List<Subscription> due = subscriptionRepository
+                .findByStatusAndStartDateLessThanEqual(SubscriptionStatus.ACTIVE, today);
 
-        for (Subscription sub : expired) {
+        for (Subscription sub : due) {
             sub.setStatus(SubscriptionStatus.GRACE);
             subscriptionRepository.save(sub);
-            log.debug("Subscription {} moved to GRACE (ended {})",
-                    sub.getSubscriptionId(), sub.getEndDate());
+            log.debug("Subscription {} moved to GRACE (startDate {})",
+                    sub.getSubscriptionId(), sub.getStartDate());
         }
-        return expired.size();
+        return due.size();
     }
 
     private int moveGraceToPaymentPending(LocalDate today) {
@@ -66,8 +67,11 @@ public class BillingScheduler {
 
         for (Subscription sub : graceSubscriptions) {
             int gracePeriodDay = sub.getCustomer().getArea().getGracePeriodDay();
-            // Grace deadline: area's grace day in the month following the subscription's end month
-            LocalDate graceDeadline = YearMonth.from(sub.getEndDate()).plusMonths(1).atDay(gracePeriodDay);
+            // Grace deadline: area's grace day within the subscription's start month.
+            // For mid-month enrollments where gracePeriodDay falls before startDate, use startDate
+            // so they aren't immediately flagged before they've had a chance to pay.
+            LocalDate rawDeadline = YearMonth.from(sub.getStartDate()).atDay(gracePeriodDay);
+            LocalDate graceDeadline = rawDeadline.isBefore(sub.getStartDate()) ? sub.getStartDate() : rawDeadline;
 
             if (!today.isAfter(graceDeadline)) continue;
 
