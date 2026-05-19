@@ -55,6 +55,15 @@ public class BillingScheduler {
         for (Subscription sub : due) {
             sub.setStatus(SubscriptionStatus.GRACE);
             subscriptionRepository.save(sub);
+
+            // Advance the customer's current-subscription pointer so the UI shows this
+            // subscription (GRACE) rather than the prior month's PAID subscription.
+            Customer customer = sub.getCustomer();
+            customer.setCurrentSubscriptionStart(sub.getStartDate());
+            customer.setCurrentSubscriptionEnd(sub.getEndDate());
+            customer.setCurrentPaymentAmount(sub.getMonthlyRate());
+            customerRepository.save(customer);
+
             log.debug("Subscription {} moved to GRACE (startDate {})",
                     sub.getSubscriptionId(), sub.getStartDate());
         }

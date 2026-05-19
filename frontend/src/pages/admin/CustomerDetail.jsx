@@ -483,8 +483,12 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
             <Field label="Monthly Rate" value={fmtCurrency(customer.currentPaymentAmount)} />
-            <Field label="Due Date" value={fmtDate(customer.currentPaymentDueDate)} />
-            <Field label="Grace Deadline" value={fmtDate(customer.gracePeriodDeadline)} />
+            {customer.subscriptionStatus !== 'PAID' && (
+              <Field label="Due Date" value={fmtDate(customer.currentPaymentDueDate)} />
+            )}
+            {customer.subscriptionStatus !== 'PAID' && (
+              <Field label="Grace Deadline" value={fmtDate(customer.gracePeriodDeadline)} />
+            )}
             <div>
               <p className="text-xs text-gray-500 mb-1">Payment Status</p>
               <StatusBadge status={customer.subscriptionStatus || customer.status} />
