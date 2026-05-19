@@ -174,11 +174,13 @@ public class CustomerService {
         }
 
         customer.setStatus(CustomerStatus.ACTIVE);
-        customer.setPaymentPending(false);
+        customer.setPaymentPending(true);
         customer.setSuspendedAt(null);
         customerRepository.save(customer);
 
-        createSubscription(customer, request.monthlyRate(), request.startDate(), adminId);
+        Subscription sub = createSubscription(customer, customer.getCurrentPaymentAmount(), request.startDate(), adminId);
+        sub.setStatus(SubscriptionStatus.PAYMENT_PENDING);
+        subscriptionRepository.save(sub);
 
         auditService.log(adminId, "REENROLL_CUSTOMER", "Customer", customerId, null);
         return toResponse(customerRepository.findById(customerId).orElseThrow());
@@ -204,7 +206,7 @@ public class CustomerService {
         auditService.log(adminId, "DELETE_CUSTOMER", "Customer", customerId, null);
     }
 
-    private void createSubscription(Customer customer, java.math.BigDecimal monthlyRate,
+    private Subscription createSubscription(Customer customer, java.math.BigDecimal monthlyRate,
                                     LocalDate startDate, Long adminId) {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
@@ -232,6 +234,7 @@ public class CustomerService {
         customer.setCurrentPaymentAmount(monthlyRate);
         customer.setCurrentPaymentDueDate(start);
         customerRepository.save(customer);
+        return sub;
     }
 
     private Customer findCustomer(Long customerId) {

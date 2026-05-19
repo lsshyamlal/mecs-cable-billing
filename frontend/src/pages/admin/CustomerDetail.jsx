@@ -148,9 +148,9 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
 }
 
 // ── Re-enroll Modal ───────────────────────────────────────────
-function ReEnrollModal({ customerId, lastRate, onClose, onSuccess }) {
+function ReEnrollModal({ customerId, onClose, onSuccess }) {
   const today = new Date().toISOString().split('T')[0];
-  const [form, setForm] = useState({ monthlyRate: lastRate ?? '', startDate: today });
+  const [form, setForm] = useState({ startDate: today });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -159,10 +159,7 @@ function ReEnrollModal({ customerId, lastRate, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await reEnrollCustomer(customerId, {
-        monthlyRate: Number(form.monthlyRate),
-        startDate: form.startDate || null,
-      });
+      await reEnrollCustomer(customerId, { startDate: form.startDate || null });
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to re-enroll customer.');
@@ -175,8 +172,7 @@ function ReEnrollModal({ customerId, lastRate, onClose, onSuccess }) {
     <Modal title="Re-enroll Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalError msg={error} />
-        <InputRow label="Subscription Rate (₹)" name="monthlyRate" type="number" value={form.monthlyRate} onChange={onChange} required />
-        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 -mt-1">Sets the rate for the new subscription. Record payment separately after re-enrolling.</p>
+        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">Re-enrolls at the customer's existing subscription rate. Record payment separately after re-enrolling.</p>
         <InputRow label="Start Date" name="startDate" type="date" value={form.startDate} onChange={onChange} />
         <div className="flex gap-2 pt-1">
           <button type="submit" disabled={loading}
@@ -563,7 +559,6 @@ export default function CustomerDetail() {
       {modal === 'reenroll' && (
         <ReEnrollModal
           customerId={id}
-          lastRate={customer.currentPaymentAmount ?? customer.lastPaymentAmount}
           onClose={closeModal}
           onSuccess={() => onSuccess('Customer re-enrolled.')}
         />
