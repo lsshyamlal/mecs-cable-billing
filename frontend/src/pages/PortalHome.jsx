@@ -107,7 +107,7 @@ export default function PortalHome() {
             />
             <Field label="Due Date" value={fmtDate(sub.dueDate)} />
             <div>
-              <p className="text-xs text-gray-500 mb-1">Status</p>
+              <p className="text-xs text-gray-500 mb-1">Payment Status</p>
               <StatusBadge status={sub.status} />
             </div>
             {sub.gracePeriodDeadline && (

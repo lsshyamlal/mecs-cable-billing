@@ -78,5 +78,8 @@ export const exportReportUrl = (path, params) => {
 
 // ── Admin ────────────────────────────────────────────────────
 export const runScheduler = () => api.post('/admin/scheduler/run');
+export const getAdminProfile = () => api.get('/admin/me');
+export const updateAdminProfile = (data) => api.put('/admin/me', data);
+export const changeAdminPassword = (data) => api.put('/admin/me/password', data);
 
 export default api;

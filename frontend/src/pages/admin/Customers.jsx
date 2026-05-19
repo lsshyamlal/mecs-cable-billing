@@ -69,7 +69,7 @@ export default function Customers() {
           placeholder="Search name, phone, STB ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
         />
         <select
           value={statusFilter}
@@ -125,7 +125,7 @@ export default function Customers() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">STB ID</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Area</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Phone</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Rate</th>
                 </tr>
@@ -143,7 +143,7 @@ export default function Customers() {
                     <td className="px-4 py-3 text-gray-600 font-mono text-xs">{c.stbId || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{c.areaName || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.phone}</td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={c.subscriptionStatus || c.status} /></td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtDate(c.currentPaymentDueDate)}</td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtCurrency(c.currentPaymentAmount)}</td>
                   </tr>

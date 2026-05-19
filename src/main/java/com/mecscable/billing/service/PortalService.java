@@ -51,16 +51,28 @@ public class PortalService {
     public PortalCurrentSubscriptionResponse getCurrentSubscription(Long customerId) {
         Customer c = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+        // Resolve the actual subscription status (GRACE, PAYMENT_PENDING, PAID, etc.)
+        // Fall back to the customer-level status only when no subscription start date is recorded.
+        String subscriptionStatus = c.getStatus().name();
         LocalDate gracePeriodDeadline = null;
-        if (c.getCurrentSubscriptionEnd() != null) {
+        if (c.getCurrentSubscriptionStart() != null) {
+            subscriptionStatus = subscriptionRepository
+                    .findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
+                    .map(s -> s.getStatus().name())
+                    .orElse(c.getStatus().name());
+
             int gracePeriodDay = c.getArea().getGracePeriodDay();
-            gracePeriodDeadline = YearMonth.from(c.getCurrentSubscriptionEnd()).plusMonths(1).atDay(gracePeriodDay);
+            LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
+            gracePeriodDeadline = rawDeadline.isBefore(c.getCurrentSubscriptionStart())
+                    ? c.getCurrentSubscriptionStart() : rawDeadline;
         }
+
         return new PortalCurrentSubscriptionResponse(
                 c.getCurrentSubscriptionStart(),
                 c.getCurrentSubscriptionEnd(),
                 c.getCurrentPaymentAmount(),
-                c.getStatus().name(),
+                subscriptionStatus,
                 c.getCurrentPaymentDueDate(),
                 c.isPaymentPending(),
                 gracePeriodDeadline
@@ -80,7 +92,9 @@ public class PortalService {
                             .findFirstBySubscriptionOrderByPaymentDateDesc(s)
                             .map(p -> p.getPaymentDate())
                             .orElse(null);
-                    LocalDate gracePeriodDeadline = YearMonth.from(s.getEndDate()).plusMonths(1).atDay(gracePeriodDay);
+                    LocalDate rawDeadline = YearMonth.from(s.getStartDate()).atDay(gracePeriodDay);
+                    LocalDate gracePeriodDeadline = rawDeadline.isBefore(s.getStartDate())
+                            ? s.getStartDate() : rawDeadline;
                     return new PortalSubscriptionHistoryItem(
                             s.getSubscriptionId(),
                             s.getStartDate(),

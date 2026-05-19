@@ -446,7 +446,7 @@ export default function CustomerDetail() {
       {/* Profile card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Customer Info</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
           <Field label="Phone" value={customer.phone} />
           <Field label="Email" value={customer.email} />
           <Field label="STB ID" value={customer.stbId} />
@@ -474,16 +474,16 @@ export default function CustomerDetail() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Current Subscription</h3>
         {customer.currentSubscriptionStart ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
             <Field label="Monthly Rate" value={fmtCurrency(customer.currentPaymentAmount)} />
             <Field label="Due Date" value={fmtDate(customer.currentPaymentDueDate)} />
             <div>
-              <p className="text-xs text-gray-500 mb-1">Status</p>
-              <StatusBadge status={customer.status} />
+              <p className="text-xs text-gray-500 mb-1">Payment Status</p>
+              <StatusBadge status={customer.subscriptionStatus || customer.status} />
             </div>
             {customer.paymentPending && (
-              <div className="col-span-2 sm:col-span-3">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-700 font-medium">
                   Payment pending for this period.
                 </div>

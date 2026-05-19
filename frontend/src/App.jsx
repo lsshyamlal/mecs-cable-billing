@@ -9,6 +9,7 @@ import CustomerDetail from './pages/admin/CustomerDetail';
 import CustomerForm from './pages/admin/CustomerForm';
 import Areas from './pages/admin/Areas';
 import Reports from './pages/admin/Reports';
+import AdminProfile from './pages/admin/AdminProfile';
 
 function RequireCustomer({ children }) {
   const { auth } = useAuth();
@@ -41,6 +42,7 @@ function App() {
         <Route path="/admin/customers/:id" element={<RequireAdmin><CustomerDetail /></RequireAdmin>} />
         <Route path="/admin/areas" element={<RequireAdmin><Areas /></RequireAdmin>} />
         <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
+        <Route path="/admin/profile" element={<RequireAdmin><AdminProfile /></RequireAdmin>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

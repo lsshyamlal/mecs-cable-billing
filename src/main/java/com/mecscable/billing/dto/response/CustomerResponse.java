@@ -17,6 +17,7 @@ public record CustomerResponse(
         String upiId,
         String stbId,
         String status,
+        String subscriptionStatus,
         boolean paymentPending,
         BigDecimal lastPaymentAmount,
         LocalDate lastPaymentDate,

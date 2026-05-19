@@ -47,9 +47,17 @@ public class CustomerService {
     }
 
     public List<CustomerResponse> listCustomers(String status, Long areaId) {
-        List<Customer> customers;
+        // Subscription statuses (GRACE, PAYMENT_PENDING, PAID) are not customer-level enums;
+        // fetch by area/all then filter on the computed subscriptionStatus in the response.
+        boolean isSubscriptionStatus = status != null &&
+                (status.equals("GRACE") || status.equals("PAYMENT_PENDING") || status.equals("PAID"));
 
-        if (status != null && areaId != null) {
+        List<Customer> customers;
+        if (isSubscriptionStatus) {
+            customers = areaId != null
+                    ? customerRepository.findByArea(findArea(areaId))
+                    : customerRepository.findAll();
+        } else if (status != null && areaId != null) {
             Area area = findArea(areaId);
             customers = customerRepository.findByAreaAndStatus(area, CustomerStatus.valueOf(status));
         } else if (status != null) {
@@ -60,7 +68,13 @@ public class CustomerService {
             customers = customerRepository.findAll();
         }
 
-        return customers.stream().map(this::toResponse).toList();
+        List<CustomerResponse> responses = customers.stream().map(this::toResponse).toList();
+        if (isSubscriptionStatus) {
+            responses = responses.stream()
+                    .filter(r -> status.equals(r.subscriptionStatus()))
+                    .toList();
+        }
+        return responses;
     }
 
     public CustomerResponse getCustomer(Long customerId) {
@@ -223,6 +237,10 @@ public class CustomerService {
     }
 
     private CustomerResponse toResponse(Customer c) {
+        String subscriptionStatus = c.getCurrentSubscriptionStart() == null ? null :
+                subscriptionRepository.findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
+                        .map(s -> s.getStatus().name())
+                        .orElse(null);
         return new CustomerResponse(
                 c.getCustomerId(),
                 c.getFirstName(),
@@ -236,6 +254,7 @@ public class CustomerService {
                 c.getUpiId(),
                 c.getStbId(),
                 c.getStatus().name(),
+                subscriptionStatus,
                 c.isPaymentPending(),
                 c.getLastPaymentAmount(),
                 c.getLastPaymentDate(),

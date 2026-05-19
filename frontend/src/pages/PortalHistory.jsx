@@ -17,18 +17,16 @@ export default function PortalHistory() {
 
   return (
     <Layout>
-      <div className="flex items-center gap-3 mb-2">
-        <button
-          onClick={() => navigate('/portal')}
-          className="flex items-center gap-1 text-blue-700 text-sm font-medium hover:text-blue-900 transition"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-        <h2 className="text-2xl font-bold text-gray-800">Subscription History</h2>
-      </div>
+      <button
+        onClick={() => navigate('/portal')}
+        className="flex items-center gap-1 text-blue-700 text-sm font-medium hover:text-blue-900 transition mb-1"
+      >
+        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back
+      </button>
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Subscription History</h2>
       <p className="text-sm text-gray-500 mb-6">Last 12 months</p>
 
       {error && (
@@ -58,7 +56,7 @@ export default function PortalHistory() {
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Month</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Period</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Rate</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Status</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Payment Status</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Grace Deadline</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Paid On</th>
                 </tr>

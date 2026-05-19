@@ -23,7 +23,11 @@ export default function Dashboard() {
   const counts = customers
     ? STATUS_GROUPS.map((g) => ({
         ...g,
-        count: customers.filter((c) => c.status === g.key).length,
+        count: customers.filter((c) => {
+          if (g.key === 'SUSPENDED') return c.status === 'SUSPENDED';
+          if (g.key === 'ACTIVE') return c.status === 'ACTIVE' && c.subscriptionStatus !== 'GRACE' && c.subscriptionStatus !== 'PAYMENT_PENDING';
+          return c.subscriptionStatus === g.key;
+        }).length,
       }))
     : STATUS_GROUPS.map((g) => ({ ...g, count: null }));
 

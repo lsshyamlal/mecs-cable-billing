@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { logout } from '../api';
 
@@ -35,6 +35,14 @@ const NAV = [
     ),
     label: 'Reports',
   },
+  {
+    to: '/admin/profile', end: false,
+    icon: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    ),
+    label: 'Profile',
+  },
 ];
 
 export default function AdminLayout({ children }) {
@@ -49,7 +57,7 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
       {/* Top bar */}
       <header className="bg-blue-800 shadow-md z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -59,9 +67,9 @@ export default function AdminLayout({ children }) {
           </div>
           <div className="flex items-center gap-4">
             {auth && (
-              <span className="text-blue-100 text-sm hidden sm:block">
+              <Link to="/admin/profile" className="text-blue-100 text-sm hidden sm:block hover:text-white transition">
                 {auth.name}
-              </span>
+              </Link>
             )}
             <button
               onClick={handleLogout}
