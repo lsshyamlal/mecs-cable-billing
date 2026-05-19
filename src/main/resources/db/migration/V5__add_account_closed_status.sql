@@ -1,0 +1,1 @@
+ALTER TYPE customer_status ADD VALUE 'ACCOUNT_CLOSED';

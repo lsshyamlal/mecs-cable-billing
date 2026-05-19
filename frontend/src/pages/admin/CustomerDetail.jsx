@@ -329,6 +329,7 @@ export default function CustomerDetail() {
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+  const [actionError, setActionError] = useState('');
   const [suspendLoading, setSuspendLoading] = useState(false);
 
   const reload = () => {
@@ -347,13 +348,14 @@ export default function CustomerDetail() {
   const handleCloseAccount = async () => {
     if (!window.confirm('Close this account? Any open subscription will be cancelled immediately.')) return;
     setSuspendLoading(true);
+    setActionError('');
     try {
       await closeAccount(id);
       setActionMsg('Account closed.');
       reload();
       setTimeout(() => setActionMsg(''), 4000);
     } catch (err) {
-      setActionMsg(err.response?.data?.message || 'Failed to close account.');
+      setActionError(err.response?.data?.message || 'Failed to close account.');
     } finally {
       setSuspendLoading(false);
     }
@@ -365,7 +367,7 @@ export default function CustomerDetail() {
       await deleteCustomer(id);
       navigate('/admin/customers');
     } catch (err) {
-      setActionMsg(err.response?.data?.message || 'Failed to delete.');
+      setActionError(err.response?.data?.message || 'Failed to delete.');
     }
   };
 
@@ -397,10 +399,14 @@ export default function CustomerDetail() {
         <span className="text-gray-800 font-medium">{fullName}</span>
       </div>
 
-      {/* Success message */}
       {actionMsg && (
         <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2 mb-4">
           {actionMsg}
+        </div>
+      )}
+      {actionError && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+          {actionError}
         </div>
       )}
 
