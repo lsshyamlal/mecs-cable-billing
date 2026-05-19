@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -237,10 +238,17 @@ public class CustomerService {
     }
 
     private CustomerResponse toResponse(Customer c) {
-        String subscriptionStatus = c.getCurrentSubscriptionStart() == null ? null :
-                subscriptionRepository.findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
-                        .map(s -> s.getStatus().name())
-                        .orElse(null);
+        String subscriptionStatus = null;
+        LocalDate gracePeriodDeadline = null;
+        if (c.getCurrentSubscriptionStart() != null) {
+            subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
+                    .map(s -> s.getStatus().name())
+                    .orElse(null);
+            int gracePeriodDay = c.getArea().getGracePeriodDay();
+            LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
+            gracePeriodDeadline = rawDeadline.isBefore(c.getCurrentSubscriptionStart())
+                    ? c.getCurrentSubscriptionStart() : rawDeadline;
+        }
         return new CustomerResponse(
                 c.getCustomerId(),
                 c.getFirstName(),
@@ -263,6 +271,7 @@ public class CustomerService {
                 c.getCurrentPaymentDueDate(),
                 c.getCurrentSubscriptionStart(),
                 c.getCurrentSubscriptionEnd(),
+                gracePeriodDeadline,
                 c.getAccountCreatedAt()
         );
     }

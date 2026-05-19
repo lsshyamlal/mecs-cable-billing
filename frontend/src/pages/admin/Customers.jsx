@@ -127,6 +127,7 @@ export default function Customers() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Phone</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Grace Deadline</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Rate</th>
                 </tr>
               </thead>
@@ -145,6 +146,7 @@ export default function Customers() {
                     <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.phone}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.subscriptionStatus || c.status} /></td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtDate(c.currentPaymentDueDate)}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden xl:table-cell">{fmtDate(c.gracePeriodDeadline)}</td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtCurrency(c.currentPaymentAmount)}</td>
                   </tr>
                 ))}

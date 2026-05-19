@@ -26,5 +26,6 @@ public record CustomerResponse(
         LocalDate currentPaymentDueDate,
         LocalDate currentSubscriptionStart,
         LocalDate currentSubscriptionEnd,
+        LocalDate gracePeriodDeadline,
         OffsetDateTime accountCreatedAt
 ) {}
