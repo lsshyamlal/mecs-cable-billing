@@ -5,10 +5,12 @@ import { listCustomers, runScheduler } from '../../api';
 
 const CUSTOMER_STATUS_GROUPS = [
   { key: 'ACTIVE', label: 'Active', color: 'bg-green-50 border-green-200 text-green-700' },
+  { key: 'SUSPENDED', label: 'Suspended', color: 'bg-red-50 border-red-200 text-red-700' },
   { key: 'ACCOUNT_CLOSED', label: 'Account Closed', color: 'bg-gray-50 border-gray-200 text-gray-600' },
 ];
 
 const SUBSCRIPTION_STATUS_GROUPS = [
+  { key: 'PAID', label: 'Paid', color: 'bg-green-50 border-green-200 text-green-700' },
   { key: 'GRACE', label: 'Grace Period', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', color: 'bg-orange-50 border-orange-200 text-orange-700' },
 ];
@@ -23,20 +25,16 @@ export default function Dashboard() {
     listCustomers({}).then((r) => setCustomers(r.data)).catch(() => setCustomers([]));
   }, []);
 
-  const countFor = (groups) =>
+  const countFor = (groups, field) =>
     customers
       ? groups.map((g) => ({
           ...g,
-          count: customers.filter((c) => {
-            if (g.key === 'ACCOUNT_CLOSED') return c.status === 'ACCOUNT_CLOSED';
-            if (g.key === 'ACTIVE') return c.status === 'ACTIVE' && c.subscriptionStatus !== 'GRACE' && c.subscriptionStatus !== 'PAYMENT_PENDING';
-            return c.subscriptionStatus === g.key;
-          }).length,
+          count: customers.filter((c) => c[field] === g.key).length,
         }))
       : groups.map((g) => ({ ...g, count: null }));
 
-  const customerCounts = countFor(CUSTOMER_STATUS_GROUPS);
-  const subscriptionCounts = countFor(SUBSCRIPTION_STATUS_GROUPS);
+  const customerCounts = countFor(CUSTOMER_STATUS_GROUPS, 'status');
+  const subscriptionCounts = countFor(SUBSCRIPTION_STATUS_GROUPS, 'subscriptionStatus');
 
   const handleRunScheduler = async () => {
     setSchedulerLoading(true);
@@ -60,7 +58,7 @@ export default function Dashboard() {
       {/* Customer Status */}
       <div className="mb-6">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer Status</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {customerCounts.map((g) => (
             <button
               key={g.key}
@@ -80,7 +78,7 @@ export default function Dashboard() {
       {/* Subscription Status */}
       <div className="mb-8">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Subscription Status</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {subscriptionCounts.map((g) => (
             <button
               key={g.key}
