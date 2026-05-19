@@ -224,7 +224,7 @@ public class CustomerService {
         customer.setCurrentSubscriptionStart(start);
         customer.setCurrentSubscriptionEnd(end);
         customer.setCurrentPaymentAmount(monthlyRate);
-        customer.setCurrentPaymentDueDate(end);
+        customer.setCurrentPaymentDueDate(start);
         customerRepository.save(customer);
     }
 

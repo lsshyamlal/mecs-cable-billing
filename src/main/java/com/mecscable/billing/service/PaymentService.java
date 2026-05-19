@@ -94,7 +94,7 @@ public class PaymentService {
         customer.setLastPaymentAmount(request.amount());
         customer.setLastPaymentDate(payDate);
         customer.setCurrentPaymentAmount(request.amount());
-        customer.setCurrentPaymentDueDate(nextEnd);
+        customer.setCurrentPaymentDueDate(nextStart);
         customer.setCurrentSubscriptionStart(nextStart);
         customer.setCurrentSubscriptionEnd(nextEnd);
         customer.setPaymentPending(false);
