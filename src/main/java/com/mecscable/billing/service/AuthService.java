@@ -117,12 +117,12 @@ public class AuthService {
             throw new BadCredentialsException("Invalid credentials");
         }
         if (customer.getStatus() != CustomerStatus.ACTIVE) {
-            if (customer.getStatus() == CustomerStatus.SUSPENDED
-                    && (customer.getSuspendedAt() == null
-                        || customer.getSuspendedAt().plusYears(2).isAfter(OffsetDateTime.now(ZoneId.of("Asia/Kolkata"))))) {
-                // suspended but within 2-year read-only access window — allow login
-                // null suspendedAt means suspended before tracking was added; grant access
-            } else {
+            boolean withinReadOnlyWindow = customer.getSuspendedAt() == null
+                    || customer.getSuspendedAt().plusYears(2).isAfter(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
+            boolean allowedReadOnly = (customer.getStatus() == CustomerStatus.SUSPENDED
+                    || customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED)
+                    && withinReadOnlyWindow;
+            if (!allowedReadOnly) {
                 throw new DisabledException("Customer account is not accessible");
             }
         }

@@ -1,5 +1,5 @@
 package com.mecscable.billing.entity;
 
 public enum CustomerStatus {
-    ACTIVE, SUSPENDED
+    ACTIVE, SUSPENDED, ACCOUNT_CLOSED
 }

@@ -4,14 +4,21 @@ export const STATUS_COLORS = {
   PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
   SUSPENDED: 'bg-red-100 text-red-800',
   CANCELLED: 'bg-gray-100 text-gray-700',
+  ACCOUNT_CLOSED: 'bg-gray-100 text-gray-600',
   PAID: 'bg-blue-100 text-blue-800',
+};
+
+const STATUS_LABELS = {
+  ACCOUNT_CLOSED: 'Account Closed',
+  PAYMENT_PENDING: 'Payment Pending',
 };
 
 export function StatusBadge({ status }) {
   const colorClass = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700';
+  const label = STATUS_LABELS[status] || status?.replace(/_/g, ' ');
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colorClass}`}>
-      {status?.replace(/_/g, ' ')}
+      {label}
     </span>
   );
 }

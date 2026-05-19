@@ -3,7 +3,12 @@ import AdminLayout from '../../components/AdminLayout';
 import { getAreas, getPaymentReport, getCustomerReport, exportReportUrl } from '../../api';
 import { StatusBadge, fmtDate, fmtCurrency } from '../../utils';
 
-const STATUS_OPTIONS = ['ACTIVE', 'GRACE', 'PAYMENT_PENDING', 'SUSPENDED', 'CANCELLED'];
+const STATUS_OPTIONS = ['ACTIVE', 'GRACE', 'PAYMENT_PENDING', 'PAID', 'SUSPENDED', 'ACCOUNT_CLOSED'];
+
+const STATUS_LABELS = {
+  ACCOUNT_CLOSED: 'Account Closed',
+  PAYMENT_PENDING: 'Payment Pending',
+};
 
 function SectionHeader({ title, children }) {
   return (
@@ -220,7 +225,7 @@ export default function Reports() {
               >
                 <option value="">All Statuses</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                  <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>

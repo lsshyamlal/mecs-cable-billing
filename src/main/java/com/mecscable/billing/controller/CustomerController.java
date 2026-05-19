@@ -53,11 +53,11 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.updateCustomer(id, request, principal.getUserId()));
     }
 
-    @PutMapping("/{id}/suspend")
-    public ResponseEntity<Void> suspendCustomer(
+    @PutMapping("/{id}/close-account")
+    public ResponseEntity<Void> closeAccount(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        customerService.suspendCustomer(id, principal.getUserId());
+        customerService.closeAccount(id, principal.getUserId());
         return ResponseEntity.ok().build();
     }
 

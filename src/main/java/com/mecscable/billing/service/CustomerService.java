@@ -146,30 +146,31 @@ public class CustomerService {
     }
 
     @Transactional
-    public void suspendCustomer(Long customerId, Long adminId) {
+    public void closeAccount(Long customerId, Long adminId) {
         Customer customer = findCustomer(customerId);
-        if (customer.getStatus() == CustomerStatus.SUSPENDED) {
-            throw new IllegalArgumentException("Customer is already suspended");
+        if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
+            throw new IllegalArgumentException("Customer account is already closed");
         }
-        customer.setStatus(CustomerStatus.SUSPENDED);
+        customer.setStatus(CustomerStatus.ACCOUNT_CLOSED);
         customer.setPaymentPending(false);
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
-        subscriptionRepository.findByCustomerAndStatus(customer, SubscriptionStatus.ACTIVE)
-                .ifPresent(sub -> {
-                    sub.setStatus(SubscriptionStatus.CANCELLED);
-                    subscriptionRepository.save(sub);
-                });
+        List<Subscription> openSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
+                customer, List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING));
+        for (Subscription sub : openSubs) {
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+            subscriptionRepository.save(sub);
+        }
 
-        auditService.log(adminId, "SUSPEND_CUSTOMER", "Customer", customerId, null);
+        auditService.log(adminId, "CLOSE_ACCOUNT", "Customer", customerId, null);
     }
 
     @Transactional
     public CustomerResponse reEnrollCustomer(Long customerId, EnrollmentRequest request, Long adminId) {
         Customer customer = findCustomer(customerId);
-        if (customer.getStatus() != CustomerStatus.SUSPENDED) {
-            throw new IllegalArgumentException("Customer is not suspended");
+        if (customer.getStatus() != CustomerStatus.SUSPENDED && customer.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
+            throw new IllegalArgumentException("Customer account must be suspended or closed to re-enroll");
         }
 
         customer.setStatus(CustomerStatus.ACTIVE);
@@ -195,7 +196,7 @@ public class CustomerService {
     public void deleteCustomer(Long customerId, Long adminId) {
         Customer customer = findCustomer(customerId);
         if (customer.getStatus() == CustomerStatus.ACTIVE) {
-            throw new IllegalArgumentException("Cannot delete an active customer — suspend first");
+            throw new IllegalArgumentException("Cannot delete an active customer — close the account first");
         }
         paymentRepository.deleteAll(paymentRepository.findByCustomerOrderByPaymentDateDesc(customer));
         subscriptionRepository.deleteAll(subscriptionRepository.findByCustomerOrderByStartDateDesc(customer));
@@ -240,7 +241,9 @@ public class CustomerService {
     private CustomerResponse toResponse(Customer c) {
         String subscriptionStatus = null;
         LocalDate gracePeriodDeadline = null;
-        if (c.getCurrentSubscriptionStart() != null) {
+        if (c.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
+            subscriptionStatus = "PAID";
+        } else if (c.getCurrentSubscriptionStart() != null) {
             subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
                     .map(s -> s.getStatus().name())
                     .orElse(null);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import {
-  getCustomer, getAreas, updateCustomer, suspendCustomer,
+  getCustomer, getAreas, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer,
 } from '../../api';
@@ -344,16 +344,16 @@ export default function CustomerDetail() {
   const closeModal = () => setModal(null);
   const onSuccess = (msg) => { closeModal(); setActionMsg(msg); reload(); setTimeout(() => setActionMsg(''), 4000); };
 
-  const handleSuspend = async () => {
-    if (!window.confirm('Suspend this customer? Their subscription will end at month-end.')) return;
+  const handleCloseAccount = async () => {
+    if (!window.confirm('Close this account? Any open subscription will be cancelled immediately.')) return;
     setSuspendLoading(true);
     try {
-      await suspendCustomer(id);
-      setActionMsg('Customer suspended.');
+      await closeAccount(id);
+      setActionMsg('Account closed.');
       reload();
       setTimeout(() => setActionMsg(''), 4000);
     } catch (err) {
-      setActionMsg(err.response?.data?.message || 'Failed to suspend.');
+      setActionMsg(err.response?.data?.message || 'Failed to close account.');
     } finally {
       setSuspendLoading(false);
     }
@@ -423,16 +423,16 @@ export default function CustomerDetail() {
           >
             Edit
           </button>
-          {customer.status !== 'SUSPENDED' && customer.status !== 'CANCELLED' && (
+          {customer.status !== 'SUSPENDED' && customer.status !== 'ACCOUNT_CLOSED' && (
             <button
-              onClick={handleSuspend}
+              onClick={handleCloseAccount}
               disabled={suspendLoading}
               className="bg-white text-red-600 border border-red-300 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
             >
-              {suspendLoading ? 'Suspending…' : 'Suspend'}
+              {suspendLoading ? 'Closing…' : 'Close Account'}
             </button>
           )}
-          {(customer.status === 'SUSPENDED' || customer.status === 'CANCELLED') && (
+          {(customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED') && (
             <button
               onClick={() => setModal('reenroll')}
               className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition"

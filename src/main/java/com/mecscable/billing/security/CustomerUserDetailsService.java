@@ -27,10 +27,12 @@ public class CustomerUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String phone) throws UsernameNotFoundException {
         Customer customer = customerRepository.findByPhone(phone)
                 .orElseThrow(() -> new UsernameNotFoundException("Customer not found: " + phone));
+        boolean withinReadOnlyWindow = customer.getSuspendedAt() == null
+                || customer.getSuspendedAt().plusYears(2).isAfter(OffsetDateTime.now(IST));
         boolean active = customer.getStatus() == CustomerStatus.ACTIVE
-                || (customer.getStatus() == CustomerStatus.SUSPENDED
-                    && (customer.getSuspendedAt() == null
-                        || customer.getSuspendedAt().plusYears(2).isAfter(OffsetDateTime.now(IST))));
+                || ((customer.getStatus() == CustomerStatus.SUSPENDED
+                     || customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED)
+                    && withinReadOnlyWindow);
         return new UserPrincipal(customer.getCustomerId(), customer.getPhone(), customer.getPasswordHash(), "ROLE_CUSTOMER", active);
     }
 }

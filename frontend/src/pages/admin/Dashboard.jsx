@@ -7,7 +7,7 @@ const STATUS_GROUPS = [
   { key: 'ACTIVE', label: 'Active', color: 'bg-green-50 border-green-200 text-green-700' },
   { key: 'GRACE', label: 'Grace Period', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', color: 'bg-orange-50 border-orange-200 text-orange-700' },
-  { key: 'SUSPENDED', label: 'Suspended', color: 'bg-red-50 border-red-200 text-red-700' },
+  { key: 'ACCOUNT_CLOSED', label: 'Account Closed', color: 'bg-gray-50 border-gray-200 text-gray-600' },
 ];
 
 export default function Dashboard() {
@@ -24,7 +24,7 @@ export default function Dashboard() {
     ? STATUS_GROUPS.map((g) => ({
         ...g,
         count: customers.filter((c) => {
-          if (g.key === 'SUSPENDED') return c.status === 'SUSPENDED';
+          if (g.key === 'ACCOUNT_CLOSED') return c.status === 'ACCOUNT_CLOSED';
           if (g.key === 'ACTIVE') return c.status === 'ACTIVE' && c.subscriptionStatus !== 'GRACE' && c.subscriptionStatus !== 'PAYMENT_PENDING';
           return c.subscriptionStatus === g.key;
         }).length,
