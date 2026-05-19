@@ -6,7 +6,7 @@
 ACTIVE ──[scheduler: start date reached]──► GRACE
 GRACE  ──[scheduler: past grace period day]──► PAYMENT_PENDING
 PAYMENT_PENDING ──[admin records payment]──► PAID
-PAID ──[next month begins]──► ACTIVE (new subscription created)
+PAID ──[payment recorded: next month's subscription pre-created immediately]──► ACTIVE
 ```
 
 ## Customer Account Lifecycle
