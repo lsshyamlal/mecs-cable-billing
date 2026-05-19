@@ -212,12 +212,18 @@ public class CustomerService {
         LocalDate start = startDate != null ? startDate : LocalDate.now(IST);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
+        // Payment is due on the start date, so a subscription starting today or in the past
+        // enters GRACE immediately. ACTIVE is reserved for future-dated subscriptions that
+        // the scheduler hasn't yet brought live.
+        SubscriptionStatus initialStatus = start.isAfter(LocalDate.now(IST))
+                ? SubscriptionStatus.ACTIVE : SubscriptionStatus.GRACE;
+
         Subscription sub = new Subscription();
         sub.setCustomer(customer);
         sub.setMonthlyRate(monthlyRate);
         sub.setStartDate(start);
         sub.setEndDate(end);
-        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setStatus(initialStatus);
         sub.setEnrolledBy(admin);
         subscriptionRepository.save(sub);
 
