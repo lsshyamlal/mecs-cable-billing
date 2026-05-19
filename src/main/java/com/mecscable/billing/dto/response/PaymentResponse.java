@@ -11,7 +11,7 @@ public record PaymentResponse(
         Long subscriptionId,
         LocalDate forMonth,
         BigDecimal amount,
-        LocalDate paymentDate,
+        OffsetDateTime paymentDate,
         String paymentMethod,
         Long recordedByAdminId,
         String recordedByName,

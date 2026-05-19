@@ -2,10 +2,11 @@ package com.mecscable.billing.dto.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 public record PaymentReportRow(
         Long paymentId,
-        LocalDate paymentDate,
+        OffsetDateTime paymentDate,
         LocalDate forMonth,
         Long customerId,
         String customerName,

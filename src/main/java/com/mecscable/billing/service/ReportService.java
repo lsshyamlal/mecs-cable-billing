@@ -18,11 +18,16 @@ import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
 public class ReportService {
+
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     private final PaymentRepository paymentRepository;
     private final CustomerService customerService;
@@ -143,7 +148,9 @@ public class ReportService {
 
     private List<Payment> fetchPayments(LocalDate from, LocalDate to) {
         if (from != null && to != null) {
-            return paymentRepository.findByPaymentDateBetweenOrderByPaymentDateDesc(from, to);
+            OffsetDateTime fromOdt = from.atStartOfDay(IST).toOffsetDateTime();
+            OffsetDateTime toOdt = to.atTime(LocalTime.MAX).atZone(IST).toOffsetDateTime();
+            return paymentRepository.findByPaymentDateBetweenOrderByPaymentDateDesc(fromOdt, toOdt);
         }
         return paymentRepository.findAll();
     }

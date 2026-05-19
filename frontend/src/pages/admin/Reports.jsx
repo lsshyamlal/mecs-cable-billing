@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { getAreas, getPaymentReport, getCustomerReport, exportReportUrl } from '../../api';
-import { StatusBadge, fmtDate, fmtCurrency } from '../../utils';
+import { StatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
 const STATUS_OPTIONS = ['ACTIVE', 'GRACE', 'PAYMENT_PENDING', 'PAID', 'SUSPENDED', 'ACCOUNT_CLOSED'];
 
@@ -187,7 +187,7 @@ export default function Reports() {
                     <tbody className="divide-y divide-gray-50">
                       {pRows.map((row) => (
                         <tr key={row.paymentId} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-600">{fmtDate(row.paymentDate)}</td>
+                          <td className="px-4 py-3 text-gray-600">{fmtDateTime(row.paymentDate)}</td>
                           <td className="px-4 py-3 font-medium text-gray-800">{row.customerName}</td>
                           <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{row.areaName}</td>
                           <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{row.phone}</td>

@@ -7,7 +7,6 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -34,7 +33,7 @@ public class Payment {
     private BigDecimal amount;
 
     @Column(name = "payment_date", nullable = false)
-    private LocalDate paymentDate;
+    private OffsetDateTime paymentDate;
 
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;

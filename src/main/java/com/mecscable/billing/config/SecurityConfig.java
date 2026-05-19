@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/logout").authenticated()
                 .requestMatchers("/api/portal/**").hasRole("CUSTOMER")
                 .requestMatchers("/api/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()  // SPA static assets + React Router paths; React handles client-side auth
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

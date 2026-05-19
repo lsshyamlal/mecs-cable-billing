@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -58,7 +60,9 @@ public class PaymentService {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
-        LocalDate payDate = request.paymentDate() != null ? request.paymentDate() : LocalDate.now(IST);
+        OffsetDateTime payDate = request.paymentDate() != null
+                ? request.paymentDate().atZone(IST).toOffsetDateTime()
+                : OffsetDateTime.now(IST);
 
         Payment payment = new Payment();
         payment.setCustomer(customer);
@@ -92,7 +96,7 @@ public class PaymentService {
         }
 
         customer.setLastPaymentAmount(request.amount());
-        customer.setLastPaymentDate(payDate);
+        customer.setLastPaymentDate(payDate.atZoneSameInstant(IST).toLocalDate());
         customer.setCurrentPaymentAmount(request.amount());
         // Keep currentSubscriptionStart/End on the paid month so the UI shows PAID.
         // The scheduler advances these to the next subscription when it transitions ACTIVE → GRACE.
@@ -115,7 +119,9 @@ public class PaymentService {
     public List<PaymentResponse> listAll(LocalDate from, LocalDate to) {
         List<Payment> payments;
         if (from != null && to != null) {
-            payments = paymentRepository.findByPaymentDateBetweenOrderByPaymentDateDesc(from, to);
+            OffsetDateTime fromOdt = from.atStartOfDay(IST).toOffsetDateTime();
+            OffsetDateTime toOdt = to.atTime(LocalTime.MAX).atZone(IST).toOffsetDateTime();
+            payments = paymentRepository.findByPaymentDateBetweenOrderByPaymentDateDesc(fromOdt, toOdt);
         } else {
             payments = paymentRepository.findAll();
         }

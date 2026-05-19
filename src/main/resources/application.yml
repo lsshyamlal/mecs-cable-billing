@@ -30,7 +30,7 @@ mecs:
   cookie:
     secure: true
   cors:
-    allowed-origin: http://localhost:3000
+    allowed-origin: ${MECS_CORS_ORIGIN:http://localhost:3000}
 
 springdoc:
   api-docs:

@@ -11,6 +11,7 @@ import com.mecscable.billing.repository.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -88,7 +89,7 @@ public class PortalService {
                 .findByCustomerAndStartDateAfterOrderByStartDateDesc(c, since)
                 .stream()
                 .map(s -> {
-                    LocalDate paymentDate = paymentRepository
+                    OffsetDateTime paymentDate = paymentRepository
                             .findFirstBySubscriptionOrderByPaymentDateDesc(s)
                             .map(p -> p.getPaymentDate())
                             .orElse(null);

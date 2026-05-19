@@ -58,11 +58,16 @@ function ModalError({ msg }) {
 
 // ── Record Payment Modal ──────────────────────────────────────
 function RecordPaymentModal({ customer, onClose, onSuccess }) {
-  const today = new Date().toISOString().split('T')[0];
+  const nowIST = () => {
+    const [datePart, timePart] = new Date()
+      .toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).split(' ');
+    return `${datePart}T${timePart.substring(0, 5)}`;
+  };
+  const todayIST = nowIST().substring(0, 10);
   const [form, setForm] = useState({
     amount: customer.currentPaymentAmount ?? '',
-    forMonth: today.substring(0, 7) + '-01',
-    paymentDate: today,
+    forMonth: todayIST.substring(0, 7) + '-01',
+    paymentDate: nowIST(),
     paymentMethod: '',
     notes: '',
   });
@@ -106,7 +111,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <InputRow label="Payment Date" name="paymentDate" type="date" value={form.paymentDate} onChange={onChange} />
+        <InputRow label="Payment Date & Time" name="paymentDate" type="datetime-local" value={form.paymentDate} onChange={onChange} />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
           <select
@@ -528,7 +533,7 @@ export default function CustomerDetail() {
                   <tr key={p.paymentId} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800">{fmtDate(p.forMonth)}</td>
                     <td className="px-4 py-3 text-gray-800 font-semibold">{fmtCurrency(p.amount)}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{fmtDate(p.paymentDate)}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{fmtDateTime(p.paymentDate)}</td>
                     <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{p.paymentMethod || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{p.recordedByName || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell text-xs">{p.notes || '—'}</td>

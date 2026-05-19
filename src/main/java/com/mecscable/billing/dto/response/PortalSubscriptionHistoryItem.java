@@ -2,6 +2,7 @@ package com.mecscable.billing.dto.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 public record PortalSubscriptionHistoryItem(
         Long subscriptionId,
@@ -9,6 +10,6 @@ public record PortalSubscriptionHistoryItem(
         LocalDate endDate,
         BigDecimal monthlyRate,
         String status,
-        LocalDate paymentDate,
+        OffsetDateTime paymentDate,
         LocalDate gracePeriodDeadline
 ) {}

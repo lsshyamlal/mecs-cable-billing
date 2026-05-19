@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getSubscriptionHistory } from '../api';
-import { STATUS_COLORS, fmtDate, fmtMonth } from '../utils';
+import { STATUS_COLORS, fmtDate, fmtDateTime, fmtMonth } from '../utils';
 
 export default function PortalHistory() {
   const [history, setHistory] = useState(null);
@@ -73,7 +73,7 @@ export default function PortalHistory() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDate(item.gracePeriodDeadline)}</td>
-                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDate(item.paymentDate)}</td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDateTime(item.paymentDate)}</td>
                   </tr>
                 ))}
               </tbody>
