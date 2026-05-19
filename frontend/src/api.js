@@ -21,8 +21,12 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         isRefreshing = false;
+        const stored = localStorage.getItem('mecs_auth');
+        const name = stored ? JSON.parse(stored).name : null;
         localStorage.removeItem('mecs_auth');
-        window.location.href = '/login?expired=1';
+        const params = new URLSearchParams({ expired: '1' });
+        if (name) params.set('user', name);
+        window.location.href = `/login?${params}`;
         return Promise.reject(error);
       }
     }

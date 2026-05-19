@@ -12,7 +12,9 @@ export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const sessionExpired = new URLSearchParams(location.search).get('expired') === '1';
+  const searchParams = new URLSearchParams(location.search);
+  const sessionExpired = searchParams.get('expired') === '1';
+  const expiredUser = searchParams.get('user');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,7 +53,9 @@ export default function Login() {
 
         {sessionExpired && (
           <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-            Your session has expired. Please sign in again.
+            {expiredUser
+              ? `Your session has expired for user: ${expiredUser}. Please login again.`
+              : 'Your session has expired. Please login again.'}
           </div>
         )}
 

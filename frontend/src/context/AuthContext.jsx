@@ -24,8 +24,11 @@ export function AuthProvider({ children }) {
 
     const check = () => {
       if (Date.now() >= auth.sessionExpiresAt) {
+        const name = auth.name;
         signOut();
-        window.location.href = '/login?expired=1';
+        const params = new URLSearchParams({ expired: '1' });
+        if (name) params.set('user', name);
+        window.location.href = `/login?${params}`;
       }
     };
 
