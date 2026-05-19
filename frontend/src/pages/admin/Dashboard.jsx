@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import { listCustomers, runScheduler } from '../../api';
 
-const STATUS_GROUPS = [
+const CUSTOMER_STATUS_GROUPS = [
   { key: 'ACTIVE', label: 'Active', color: 'bg-green-50 border-green-200 text-green-700' },
+  { key: 'ACCOUNT_CLOSED', label: 'Account Closed', color: 'bg-gray-50 border-gray-200 text-gray-600' },
+];
+
+const SUBSCRIPTION_STATUS_GROUPS = [
   { key: 'GRACE', label: 'Grace Period', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', color: 'bg-orange-50 border-orange-200 text-orange-700' },
-  { key: 'ACCOUNT_CLOSED', label: 'Account Closed', color: 'bg-gray-50 border-gray-200 text-gray-600' },
 ];
 
 export default function Dashboard() {
@@ -20,16 +23,20 @@ export default function Dashboard() {
     listCustomers({}).then((r) => setCustomers(r.data)).catch(() => setCustomers([]));
   }, []);
 
-  const counts = customers
-    ? STATUS_GROUPS.map((g) => ({
-        ...g,
-        count: customers.filter((c) => {
-          if (g.key === 'ACCOUNT_CLOSED') return c.status === 'ACCOUNT_CLOSED';
-          if (g.key === 'ACTIVE') return c.status === 'ACTIVE' && c.subscriptionStatus !== 'GRACE' && c.subscriptionStatus !== 'PAYMENT_PENDING';
-          return c.subscriptionStatus === g.key;
-        }).length,
-      }))
-    : STATUS_GROUPS.map((g) => ({ ...g, count: null }));
+  const countFor = (groups) =>
+    customers
+      ? groups.map((g) => ({
+          ...g,
+          count: customers.filter((c) => {
+            if (g.key === 'ACCOUNT_CLOSED') return c.status === 'ACCOUNT_CLOSED';
+            if (g.key === 'ACTIVE') return c.status === 'ACTIVE' && c.subscriptionStatus !== 'GRACE' && c.subscriptionStatus !== 'PAYMENT_PENDING';
+            return c.subscriptionStatus === g.key;
+          }).length,
+        }))
+      : groups.map((g) => ({ ...g, count: null }));
+
+  const customerCounts = countFor(CUSTOMER_STATUS_GROUPS);
+  const subscriptionCounts = countFor(SUBSCRIPTION_STATUS_GROUPS);
 
   const handleRunScheduler = async () => {
     setSchedulerLoading(true);
@@ -50,21 +57,44 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {counts.map((g) => (
-          <button
-            key={g.key}
-            onClick={() => navigate(`/admin/customers?status=${g.key}`)}
-            className={`border rounded-xl p-4 text-left hover:shadow-md transition ${g.color}`}
-          >
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{g.label}</p>
-            <p className="text-3xl font-bold mt-1">
-              {g.count === null ? '…' : g.count}
-            </p>
-            <p className="text-xs mt-1 opacity-60">customers</p>
-          </button>
-        ))}
+      {/* Customer Status */}
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer Status</p>
+        <div className="grid grid-cols-2 gap-4">
+          {customerCounts.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => navigate(`/admin/customers?status=${g.key}`)}
+              className={`border rounded-xl p-4 text-left hover:shadow-md transition ${g.color}`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{g.label}</p>
+              <p className="text-3xl font-bold mt-1">
+                {g.count === null ? '…' : g.count}
+              </p>
+              <p className="text-xs mt-1 opacity-60">customers</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Subscription Status */}
+      <div className="mb-8">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Subscription Status</p>
+        <div className="grid grid-cols-2 gap-4">
+          {subscriptionCounts.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => navigate(`/admin/customers?status=${g.key}`)}
+              className={`border rounded-xl p-4 text-left hover:shadow-md transition ${g.color}`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{g.label}</p>
+              <p className="text-3xl font-bold mt-1">
+                {g.count === null ? '…' : g.count}
+              </p>
+              <p className="text-xs mt-1 opacity-60">customers</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Total */}
