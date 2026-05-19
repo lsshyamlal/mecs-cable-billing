@@ -23,8 +23,9 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     List<Subscription> findByStatus(SubscriptionStatus status);
 
-    // Resolve the current subscription by its start date (used by portal current-subscription view)
-    Optional<Subscription> findFirstByCustomerAndStartDate(Customer customer, LocalDate startDate);
+    // Resolve the current subscription by its start date — order by ID desc so a re-enrolled
+    // ACTIVE subscription wins over an older CANCELLED one on the same start date
+    Optional<Subscription> findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(Customer customer, LocalDate startDate);
 
     // Customer portal: last 12 months of subscription history
     List<Subscription> findByCustomerAndStartDateAfterOrderByStartDateDesc(Customer customer, LocalDate since);

@@ -58,7 +58,7 @@ public class PortalService {
         LocalDate gracePeriodDeadline = null;
         if (c.getCurrentSubscriptionStart() != null) {
             subscriptionStatus = subscriptionRepository
-                    .findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
+                    .findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart())
                     .map(s -> s.getStatus().name())
                     .orElse(c.getStatus().name());
 

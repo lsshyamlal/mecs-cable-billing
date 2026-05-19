@@ -244,7 +244,7 @@ public class CustomerService {
         if (c.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
             subscriptionStatus = "PAID";
         } else if (c.getCurrentSubscriptionStart() != null) {
-            subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDate(c, c.getCurrentSubscriptionStart())
+            subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart())
                     .map(s -> s.getStatus().name())
                     .orElse(null);
             int gracePeriodDay = c.getArea().getGracePeriodDay();
