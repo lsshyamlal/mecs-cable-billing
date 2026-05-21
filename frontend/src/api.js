@@ -77,6 +77,11 @@ export const getAreas = () => api.get('/areas');
 export const createArea = (data) => api.post('/areas', data);
 export const updateArea = (id, data) => api.put(`/areas/${id}`, data);
 
+// ── Subscription Packs ────────────────────────────────────────
+export const getSubscriptionPacks = () => api.get('/subscription-packs');
+export const createSubscriptionPack = (data) => api.post('/subscription-packs', data);
+export const updateSubscriptionPack = (id, data) => api.put(`/subscription-packs/${id}`, data);
+
 // ── Customers ────────────────────────────────────────────────
 export const listCustomers = (params) => api.get('/customers', { params });
 export const getCustomer = (id) => api.get(`/customers/${id}`);

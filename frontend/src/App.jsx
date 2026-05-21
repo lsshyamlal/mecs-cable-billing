@@ -8,6 +8,7 @@ import Customers from './pages/admin/Customers';
 import CustomerDetail from './pages/admin/CustomerDetail';
 import CustomerForm from './pages/admin/CustomerForm';
 import Areas from './pages/admin/Areas';
+import SubscriptionPacks from './pages/admin/SubscriptionPacks';
 import Reports from './pages/admin/Reports';
 import AdminProfile from './pages/admin/AdminProfile';
 
@@ -41,6 +42,7 @@ function App() {
         <Route path="/admin/customers/new" element={<RequireAdmin><CustomerForm /></RequireAdmin>} />
         <Route path="/admin/customers/:id" element={<RequireAdmin><CustomerDetail /></RequireAdmin>} />
         <Route path="/admin/areas" element={<RequireAdmin><Areas /></RequireAdmin>} />
+        <Route path="/admin/subscription-packs" element={<RequireAdmin><SubscriptionPacks /></RequireAdmin>} />
         <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
         <Route path="/admin/profile" element={<RequireAdmin><AdminProfile /></RequireAdmin>} />
 
