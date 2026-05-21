@@ -164,9 +164,20 @@ public class CustomerService {
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
-        List<Subscription> openSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
-                customer, List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING));
-        for (Subscription sub : openSubs) {
+        // Current-month subscriptions (GRACE/PAYMENT_PENDING) are marked PAID — admin closes
+        // only after the customer has settled the bill.
+        List<Subscription> currentSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
+                customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING));
+        for (Subscription sub : currentSubs) {
+            sub.setStatus(SubscriptionStatus.PAID);
+            subscriptionRepository.save(sub);
+        }
+
+        // Pre-created next-month subscriptions (ACTIVE = future-dated) are cancelled since
+        // the account is closing and they will never be used.
+        List<Subscription> futureSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
+                customer, List.of(SubscriptionStatus.ACTIVE));
+        for (Subscription sub : futureSubs) {
             sub.setStatus(SubscriptionStatus.CANCELLED);
             subscriptionRepository.save(sub);
         }

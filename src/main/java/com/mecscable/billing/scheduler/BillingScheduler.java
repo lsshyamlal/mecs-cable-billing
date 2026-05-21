@@ -55,6 +55,7 @@ public class BillingScheduler {
                 .findByStatusAndStartDateLessThanEqual(SubscriptionStatus.ACTIVE, today);
 
         for (Subscription sub : due) {
+            if (sub.getCustomer().getStatus() == CustomerStatus.ACCOUNT_CLOSED) continue;
             sub.setStatus(SubscriptionStatus.GRACE);
             subscriptionRepository.save(sub);
 
@@ -77,6 +78,7 @@ public class BillingScheduler {
         int count = 0;
 
         for (Subscription sub : graceSubscriptions) {
+            if (sub.getCustomer().getStatus() == CustomerStatus.ACCOUNT_CLOSED) continue;
             int gracePeriodDay = sub.getCustomer().getArea().getGracePeriodDay();
             // Grace deadline: area's grace day within the subscription's start month.
             // For mid-month enrollments where gracePeriodDay falls before startDate, use startDate
