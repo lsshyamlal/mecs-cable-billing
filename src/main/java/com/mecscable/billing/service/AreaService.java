@@ -37,4 +37,19 @@ public class AreaService {
         area = areaRepository.save(area);
         return new AreaResponse(area.getAreaId(), area.getAreaName(), area.getGracePeriodDay());
     }
+
+    @Transactional
+    public AreaResponse updateArea(Long id, CreateAreaRequest request) {
+        Area area = areaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Area not found: " + id));
+        String trimmedName = request.areaName().trim();
+        if (!area.getAreaName().equalsIgnoreCase(trimmedName)
+                && areaRepository.existsByAreaNameIgnoreCase(trimmedName)) {
+            throw new IllegalArgumentException("Area already exists: " + trimmedName);
+        }
+        area.setAreaName(trimmedName);
+        area.setGracePeriodDay(request.gracePeriodDay());
+        area = areaRepository.save(area);
+        return new AreaResponse(area.getAreaId(), area.getAreaName(), area.getGracePeriodDay());
+    }
 }

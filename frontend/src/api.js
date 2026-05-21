@@ -75,6 +75,7 @@ export const getSubscriptionHistory = () =>
 // ── Areas ────────────────────────────────────────────────────
 export const getAreas = () => api.get('/areas');
 export const createArea = (data) => api.post('/areas', data);
+export const updateArea = (id, data) => api.put(`/areas/${id}`, data);
 
 // ── Customers ────────────────────────────────────────────────
 export const listCustomers = (params) => api.get('/customers', { params });

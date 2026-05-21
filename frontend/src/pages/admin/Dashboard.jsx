@@ -47,6 +47,7 @@ export default function Dashboard() {
       setSchedulerMsg(
         `Billing scheduler complete: ${data.graceCount} moved to GRACE, ${data.pendingCount} moved to PAYMENT_PENDING`
       );
+      listCustomers({}).then((r) => setCustomers(r.data)).catch(() => {});
     } catch {
       setSchedulerMsg('Failed to run scheduler.');
     } finally {

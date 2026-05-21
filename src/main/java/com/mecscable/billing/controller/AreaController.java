@@ -29,4 +29,10 @@ public class AreaController {
     public ResponseEntity<AreaResponse> createArea(@Valid @RequestBody CreateAreaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(areaService.createArea(request));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AreaResponse> updateArea(@PathVariable Long id,
+                                                   @Valid @RequestBody CreateAreaRequest request) {
+        return ResponseEntity.ok(areaService.updateArea(id, request));
+    }
 }
