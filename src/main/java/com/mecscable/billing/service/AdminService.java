@@ -47,7 +47,7 @@ public class AdminService {
         admin.setPhone(req.phone());
 
         Admin saved = adminRepository.save(admin);
-        auditService.log(adminId, "UPDATE_PROFILE", "Admin", adminId, "Admin updated their own profile.");
+        auditService.log(adminId, "UPDATE_PROFILE", "Admin", adminId, null);
         return toResponse(saved);
     }
 
@@ -61,7 +61,7 @@ public class AdminService {
 
         admin.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         adminRepository.save(admin);
-        auditService.log(adminId, "CHANGE_PASSWORD", "Admin", adminId, "Admin changed their own password.");
+        auditService.log(adminId, "CHANGE_PASSWORD", "Admin", adminId, null);
     }
 
     private Admin findAdmin(Long adminId) {
