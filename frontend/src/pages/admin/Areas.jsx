@@ -82,7 +82,7 @@ export default function Areas() {
           <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">{success}</div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-wrap gap-4 items-end">
+        <form onSubmit={handleSubmit} className="flex flex-wrap gap-4 items-start">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Area Name<span className="text-red-500 ml-0.5">*</span>
@@ -115,7 +115,7 @@ export default function Areas() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50 self-start mt-6"
+            className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50 mt-6"
           >
             {loading ? 'Adding…' : 'Add Area'}
           </button>
