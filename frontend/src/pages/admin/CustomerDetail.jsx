@@ -31,7 +31,7 @@ function Field({ label, value }) {
   );
 }
 
-function InputRow({ label, name, value, onChange, type = 'text', required }) {
+function InputRow({ label, name, value, onChange, type = 'text', required, disabled }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -43,7 +43,8 @@ function InputRow({ label, name, value, onChange, type = 'text', required }) {
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={disabled}
+        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
       />
     </div>
   );
@@ -67,7 +68,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
   const [form, setForm] = useState({
     amount: customer.currentPaymentAmount ?? '',
     forMonth: customer.currentSubscriptionStart ?? todayIST.substring(0, 7) + '-01',
-    paymentDate: nowIST(),
+    paymentDate: todayIST,
     paymentMethod: '',
     notes: '',
   });
@@ -135,13 +136,14 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
             </select>
           </div>
         </div>
-        <InputRow label="Payment Date & Time" name="paymentDate" type="datetime-local" value={form.paymentDate} onChange={onChange} />
+        <InputRow label="Payment Date" name="paymentDate" type="date" value={form.paymentDate} onChange={onChange} disabled />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method<span className="text-red-500 ml-0.5">*</span></label>
           <select
             name="paymentMethod"
             value={form.paymentMethod}
             onChange={onChange}
+            required
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select…</option>
@@ -345,6 +347,76 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
   );
 }
 
+// ── Close Account Confirm Modal ───────────────────────────────
+function CloseAccountModal({ customerId, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleConfirm = async () => {
+    setLoading(true); setError('');
+    try {
+      await closeAccount(customerId);
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to close account.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title="Close Account" onClose={onClose}>
+      <ModalError msg={error} />
+      <p className="text-sm text-gray-700 mb-5">Close this account? Any open subscription will be cancelled immediately.</p>
+      <div className="flex gap-2">
+        <button onClick={handleConfirm} disabled={loading}
+          className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+          {loading ? 'Closing…' : 'Close Account'}
+        </button>
+        <button type="button" onClick={onClose}
+          className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+          Cancel
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Delete Customer Confirm Modal ─────────────────────────────
+function DeleteCustomerModal({ customerId, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleConfirm = async () => {
+    setLoading(true); setError('');
+    try {
+      await deleteCustomer(customerId);
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete customer.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title="Delete Customer" onClose={onClose}>
+      <ModalError msg={error} />
+      <p className="text-sm text-gray-700 mb-5">Permanently delete this customer? This cannot be undone.</p>
+      <div className="flex gap-2">
+        <button onClick={handleConfirm} disabled={loading}
+          className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+          {loading ? 'Deleting…' : 'Delete Customer'}
+        </button>
+        <button type="button" onClick={onClose}
+          className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+          Cancel
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function CustomerDetail() {
   const { id } = useParams();
@@ -356,7 +428,6 @@ export default function CustomerDetail() {
   const [modal, setModal] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
   const [actionError, setActionError] = useState('');
-  const [suspendLoading, setSuspendLoading] = useState(false);
 
   const reload = () => {
     getCustomer(id).then((r) => setCustomer(r.data)).catch(() => setError('Failed to load customer.'));
@@ -371,31 +442,9 @@ export default function CustomerDetail() {
   const closeModal = () => setModal(null);
   const onSuccess = (msg) => { closeModal(); setActionMsg(msg); reload(); setTimeout(() => setActionMsg(''), 4000); };
 
-  const handleCloseAccount = async () => {
-    if (!window.confirm('Close this account? Any open subscription will be cancelled immediately.')) return;
-    setSuspendLoading(true);
-    setActionError('');
-    try {
-      await closeAccount(id);
-      setActionMsg('Account closed.');
-      reload();
-      setTimeout(() => setActionMsg(''), 4000);
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to close account.');
-    } finally {
-      setSuspendLoading(false);
-    }
-  };
+  const handleCloseAccount = () => setModal('closeAccount');
 
-  const handleDelete = async () => {
-    if (!window.confirm('Permanently delete this customer? This cannot be undone.')) return;
-    try {
-      await deleteCustomer(id);
-      navigate('/admin/customers');
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to delete.');
-    }
-  };
+  const handleDelete = () => setModal('deleteCustomer');
 
   if (error) return (
     <AdminLayout>
@@ -458,10 +507,9 @@ export default function CustomerDetail() {
           {customer.status !== 'SUSPENDED' && customer.status !== 'ACCOUNT_CLOSED' && (
             <button
               onClick={handleCloseAccount}
-              disabled={suspendLoading}
-              className="bg-white text-red-600 border border-red-300 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+              className="bg-white text-red-600 border border-red-300 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition"
             >
-              {suspendLoading ? 'Closing…' : 'Close Account'}
+              Close Account
             </button>
           )}
           {(customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED') && (
@@ -600,6 +648,20 @@ export default function CustomerDetail() {
           customerId={id}
           onClose={closeModal}
           onSuccess={() => onSuccess('Password reset.')}
+        />
+      )}
+      {modal === 'closeAccount' && (
+        <CloseAccountModal
+          customerId={id}
+          onClose={closeModal}
+          onSuccess={() => onSuccess('Account closed.')}
+        />
+      )}
+      {modal === 'deleteCustomer' && (
+        <DeleteCustomerModal
+          customerId={id}
+          onClose={closeModal}
+          onSuccess={() => navigate('/admin/customers')}
         />
       )}
     </AdminLayout>
