@@ -51,7 +51,8 @@ public class CustomerService {
         // Subscription statuses (GRACE, PAYMENT_PENDING, PAID) are not customer-level enums;
         // fetch by area/all then filter on the computed subscriptionStatus in the response.
         boolean isSubscriptionStatus = status != null &&
-                (status.equals("GRACE") || status.equals("PAYMENT_PENDING") || status.equals("PAID"));
+                (status.equals("GRACE") || status.equals("PAYMENT_PENDING") || status.equals("PAID")
+                        || status.equals("SUSPENDED") || status.equals("CANCELLED"));
 
         List<Customer> customers;
         if (isSubscriptionStatus) {
@@ -154,22 +155,23 @@ public class CustomerService {
     }
 
     @Transactional
-    public void closeAccount(Long customerId, Long adminId) {
+    public void closeAccount(Long customerId, boolean paymentCollected, Long adminId) {
         Customer customer = findCustomer(customerId);
         if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
             throw new IllegalArgumentException("Customer account is already closed");
         }
-        customer.setStatus(CustomerStatus.ACCOUNT_CLOSED);
+        customer.setStatus(paymentCollected ? CustomerStatus.ACCOUNT_CLOSED : CustomerStatus.SUSPENDED);
         customer.setPaymentPending(false);
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
-        // Current-month subscriptions (GRACE/PAYMENT_PENDING) are marked PAID — admin closes
-        // only after the customer has settled the bill.
+        // GRACE/PAYMENT_PENDING subscriptions: mark PAID if admin confirmed payment was collected,
+        // otherwise SUSPENDED to preserve the unpaid debt in history.
+        SubscriptionStatus outstandingResolution = paymentCollected ? SubscriptionStatus.PAID : SubscriptionStatus.SUSPENDED;
         List<Subscription> currentSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
                 customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING));
         for (Subscription sub : currentSubs) {
-            sub.setStatus(SubscriptionStatus.PAID);
+            sub.setStatus(outstandingResolution);
             subscriptionRepository.save(sub);
         }
 
@@ -269,16 +271,16 @@ public class CustomerService {
     private CustomerResponse toResponse(Customer c) {
         String subscriptionStatus = null;
         LocalDate gracePeriodDeadline = null;
-        if (c.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
-            subscriptionStatus = "PAID";
-        } else if (c.getCurrentSubscriptionStart() != null) {
+        if (c.getCurrentSubscriptionStart() != null) {
             subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart())
                     .map(s -> s.getStatus().name())
                     .orElse(null);
-            int gracePeriodDay = c.getArea().getGracePeriodDay();
-            LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
-            gracePeriodDeadline = rawDeadline.isBefore(c.getCurrentSubscriptionStart())
-                    ? c.getCurrentSubscriptionStart() : rawDeadline;
+            if (c.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
+                int gracePeriodDay = c.getArea().getGracePeriodDay();
+                LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
+                gracePeriodDeadline = rawDeadline.isBefore(c.getCurrentSubscriptionStart())
+                        ? c.getCurrentSubscriptionStart() : rawDeadline;
+            }
         }
         return new CustomerResponse(
                 c.getCustomerId(),

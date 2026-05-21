@@ -13,6 +13,8 @@ const SUBSCRIPTION_STATUS_GROUPS = [
   { key: 'PAID', label: 'Paid', color: 'bg-green-50 border-green-200 text-green-700' },
   { key: 'GRACE', label: 'Grace Period', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+  { key: 'SUSPENDED', label: 'Suspended', color: 'bg-red-50 border-red-200 text-red-700' },
+  { key: 'CANCELLED', label: 'Cancelled', color: 'bg-gray-50 border-gray-200 text-gray-600' },
 ];
 
 export default function Dashboard() {
@@ -84,7 +86,7 @@ export default function Dashboard() {
       {/* Subscription Status */}
       <div className="mb-8">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Subscription Status</p>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 md:grid-cols-5">
           {subscriptionCounts.map((g) => (
             <button
               key={g.key}
@@ -119,11 +121,12 @@ export default function Dashboard() {
             + Add Customer
           </button>
           <button
-            onClick={() => navigate('/admin/customers?status=PAYMENT_PENDING')}
-            className="bg-orange-50 text-orange-700 border border-orange-200 text-sm font-medium px-4 py-2 rounded-lg hover:bg-orange-100 transition"
+            onClick={() => navigate('/admin/areas')}
+            className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition"
           >
-            View Pending Payments
+            + Add Area
           </button>
+
           <button
             onClick={handleRunScheduler}
             disabled={schedulerLoading}

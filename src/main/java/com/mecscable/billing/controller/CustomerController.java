@@ -1,5 +1,6 @@
 package com.mecscable.billing.controller;
 
+import com.mecscable.billing.dto.request.CloseAccountRequest;
 import com.mecscable.billing.dto.request.CreateCustomerRequest;
 import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.ResetPasswordRequest;
@@ -56,8 +57,9 @@ public class CustomerController {
     @PutMapping("/{id}/close-account")
     public ResponseEntity<Void> closeAccount(
             @PathVariable Long id,
+            @RequestBody CloseAccountRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        customerService.closeAccount(id, principal.getUserId());
+        customerService.closeAccount(id, request.paymentCollected(), principal.getUserId());
         return ResponseEntity.ok().build();
     }
 

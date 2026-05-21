@@ -347,14 +347,16 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
 }
 
 // ── Close Account Confirm Modal ───────────────────────────────
-function CloseAccountModal({ customerId, onClose, onSuccess }) {
+function CloseAccountModal({ customer, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleConfirm = async () => {
+  const hasOutstanding = customer.subscriptionStatus === 'GRACE' || customer.subscriptionStatus === 'PAYMENT_PENDING';
+
+  const handleClose = async (paymentCollected) => {
     setLoading(true); setError('');
     try {
-      await closeAccount(customerId);
+      await closeAccount(customer.customerId, { paymentCollected });
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to close account.');
@@ -366,17 +368,42 @@ function CloseAccountModal({ customerId, onClose, onSuccess }) {
   return (
     <Modal title="Close Account" onClose={onClose}>
       <ModalError msg={error} />
-      <p className="text-sm text-gray-700 mb-5">Close this account? Any open subscription will be cancelled immediately.</p>
-      <div className="flex gap-2">
-        <button onClick={handleConfirm} disabled={loading}
-          className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-          {loading ? 'Closing…' : 'Close Account'}
-        </button>
-        <button type="button" onClick={onClose}
-          className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
-          Cancel
-        </button>
-      </div>
+      {hasOutstanding ? (
+        <>
+          <p className="text-sm text-gray-700 mb-1">
+            This customer has an outstanding <span className="font-semibold">{customer.subscriptionStatus === 'GRACE' ? 'Grace Period' : 'Payment Pending'}</span> subscription.
+          </p>
+          <p className="text-sm text-gray-700 mb-5">Was the payment collected before closing the account?</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => handleClose(true)} disabled={loading}
+              className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50">
+              {loading ? 'Closing…' : 'Yes, payment collected'}
+            </button>
+            <button onClick={() => handleClose(false)} disabled={loading}
+              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+              {loading ? 'Closing…' : 'No, close without payment'}
+            </button>
+            <button type="button" onClick={onClose} disabled={loading}
+              className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-gray-700 mb-5">Close this account? This cannot be undone.</p>
+          <div className="flex gap-2">
+            <button onClick={() => handleClose(false)} disabled={loading}
+              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+              {loading ? 'Closing…' : 'Close Account'}
+            </button>
+            <button type="button" onClick={onClose} disabled={loading}
+              className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }
@@ -656,7 +683,7 @@ export default function CustomerDetail() {
       )}
       {modal === 'closeAccount' && (
         <CloseAccountModal
-          customerId={id}
+          customer={customer}
           onClose={closeModal}
           onSuccess={() => onSuccess('Account closed.')}
         />
