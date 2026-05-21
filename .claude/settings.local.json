@@ -4,7 +4,8 @@
       "WebFetch(domain:github.com)",
       "Bash(gh repo *)",
       "WebFetch(domain:spring.io)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(mvn clean *)"
     ]
   }
 }

@@ -65,6 +65,7 @@ public class BillingScheduler {
             customer.setCurrentSubscriptionStart(sub.getStartDate());
             customer.setCurrentSubscriptionEnd(sub.getEndDate());
             customer.setCurrentPaymentAmount(sub.getMonthlyRate());
+            customer.setCurrentPaymentDueDate(sub.getStartDate());
             customerRepository.save(customer);
 
             log.debug("Subscription {} moved to GRACE (startDate {})",

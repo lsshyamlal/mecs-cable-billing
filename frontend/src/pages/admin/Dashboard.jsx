@@ -111,11 +111,15 @@ export default function Dashboard() {
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Future Subscription Status</p>
         <div className="grid grid-cols-2 gap-4">
           {futureSubCounts.map((g) => (
-            <div key={g.key} className={`border rounded-xl p-4 ${g.color}`}>
+            <button
+              key={g.key}
+              onClick={() => navigate(`/admin/customers?futureStatus=${g.key}`)}
+              className={`border rounded-xl p-4 text-left hover:shadow-md transition ${g.color}`}
+            >
               <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{g.label}</p>
               <p className="text-3xl font-bold mt-1">{g.count === null ? '…' : g.count}</p>
               <p className="text-xs mt-1 opacity-60">customers</p>
-            </div>
+            </button>
           ))}
         </div>
       </div>

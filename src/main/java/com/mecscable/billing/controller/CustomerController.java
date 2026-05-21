@@ -29,8 +29,9 @@ public class CustomerController {
     @GetMapping
     public ResponseEntity<List<CustomerResponse>> listCustomers(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String futureStatus,
             @RequestParam(required = false) Long areaId) {
-        return ResponseEntity.ok(customerService.listCustomers(status, areaId));
+        return ResponseEntity.ok(customerService.listCustomers(status, futureStatus, areaId));
     }
 
     @GetMapping("/{id}")

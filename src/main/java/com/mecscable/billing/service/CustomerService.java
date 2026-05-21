@@ -47,7 +47,7 @@ public class CustomerService {
         this.auditService = auditService;
     }
 
-    public List<CustomerResponse> listCustomers(String status, Long areaId) {
+    public List<CustomerResponse> listCustomers(String status, String futureStatus, Long areaId) {
         // Subscription statuses (GRACE, PAYMENT_PENDING, PAID) are not customer-level enums;
         // fetch by area/all then filter on the computed subscriptionStatus in the response.
         boolean isSubscriptionStatus = status != null &&
@@ -55,7 +55,7 @@ public class CustomerService {
                         || status.equals("SUSPENDED") || status.equals("CANCELLED"));
 
         List<Customer> customers;
-        if (isSubscriptionStatus) {
+        if (isSubscriptionStatus || futureStatus != null) {
             customers = areaId != null
                     ? customerRepository.findByArea(findArea(areaId))
                     : customerRepository.findAll();
@@ -74,6 +74,11 @@ public class CustomerService {
         if (isSubscriptionStatus) {
             responses = responses.stream()
                     .filter(r -> status.equals(r.subscriptionStatus()))
+                    .toList();
+        }
+        if (futureStatus != null) {
+            responses = responses.stream()
+                    .filter(r -> futureStatus.equals(r.futureSubscriptionStatus()))
                     .toList();
         }
         return responses;

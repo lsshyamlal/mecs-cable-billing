@@ -4,8 +4,6 @@ import AdminLayout from '../../components/AdminLayout';
 import { listCustomers, getAreas } from '../../api';
 import { StatusBadge, fmtDate, fmtCurrency } from '../../utils';
 
-const STATUS_OPTIONS = ['', 'ACTIVE', 'GRACE', 'PAYMENT_PENDING', 'PAID', 'SUSPENDED', 'ACCOUNT_CLOSED'];
-
 const STATUS_LABELS = {
   ACCOUNT_CLOSED: 'Account Closed',
   PAYMENT_PENDING: 'Payment Pending',
@@ -20,6 +18,7 @@ export default function Customers() {
   const navigate = useNavigate();
 
   const statusFilter = searchParams.get('status') || '';
+  const futureStatusFilter = searchParams.get('futureStatus') || '';
   const areaFilter = searchParams.get('areaId') || '';
 
   useEffect(() => {
@@ -30,11 +29,12 @@ export default function Customers() {
     setCustomers(null);
     const params = {};
     if (statusFilter) params.status = statusFilter;
+    if (futureStatusFilter) params.futureStatus = futureStatusFilter;
     if (areaFilter) params.areaId = areaFilter;
     listCustomers(params)
       .then((r) => setCustomers(r.data))
       .catch(() => setError('Failed to load customers.'));
-  }, [statusFilter, areaFilter]);
+  }, [statusFilter, futureStatusFilter, areaFilter]);
 
   const setFilter = (key, val) => {
     const next = new URLSearchParams(searchParams);
@@ -77,14 +77,33 @@ export default function Customers() {
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
         />
         <select
-          value={statusFilter}
-          onChange={(e) => setFilter('status', e.target.value)}
+          value={futureStatusFilter ? `f:${futureStatusFilter}` : statusFilter ? `s:${statusFilter}` : ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            const next = new URLSearchParams(searchParams);
+            next.delete('status');
+            next.delete('futureStatus');
+            if (val.startsWith('s:')) next.set('status', val.slice(2));
+            else if (val.startsWith('f:')) next.set('futureStatus', val.slice(2));
+            setSearchParams(next);
+          }}
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">All Statuses</option>
-          {STATUS_OPTIONS.filter(Boolean).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>
-          ))}
+          <option value="">All Status</option>
+          <optgroup label="Customer Status">
+            <option value="s:ACTIVE">Active</option>
+            <option value="s:ACCOUNT_CLOSED">Account Closed</option>
+          </optgroup>
+          <optgroup label="Current Subscription">
+            <option value="s:PAID">Paid</option>
+            <option value="s:GRACE">Grace Period</option>
+            <option value="s:PAYMENT_PENDING">Payment Pending</option>
+            <option value="s:SUSPENDED">Suspended</option>
+          </optgroup>
+          <optgroup label="Future Subscription">
+            <option value="f:ACTIVE">Next Month Ready</option>
+            <option value="f:CANCELLED">Cancelled</option>
+          </optgroup>
         </select>
         <select
           value={areaFilter}
@@ -96,7 +115,7 @@ export default function Customers() {
             <option key={a.areaId} value={a.areaId}>{a.areaName}</option>
           ))}
         </select>
-        {(statusFilter || areaFilter || search) && (
+        {(statusFilter || futureStatusFilter || areaFilter || search) && (
           <button
             onClick={() => { setSearch(''); setSearchParams({}); }}
             className="text-sm text-gray-500 hover:text-gray-700 underline"

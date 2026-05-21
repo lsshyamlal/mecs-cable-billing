@@ -108,9 +108,9 @@ public class PaymentService {
         customer.setLastPaymentAmount(request.amount());
         customer.setLastPaymentDate(payDate.atZoneSameInstant(IST).toLocalDate());
         customer.setCurrentPaymentAmount(request.amount());
-        // Keep currentSubscriptionStart/End on the paid month so the UI shows PAID.
-        // The scheduler advances these to the next subscription when it transitions ACTIVE → GRACE.
-        customer.setCurrentPaymentDueDate(nextStart);
+        // currentSubscriptionStart/End and currentPaymentDueDate all stay on the paid month
+        // so the UI shows consistent PAID-period info. The scheduler advances all three to
+        // the next subscription when it transitions ACTIVE → GRACE.
         customer.setPaymentPending(false);
         customerRepository.save(customer);
 
