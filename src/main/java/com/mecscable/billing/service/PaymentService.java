@@ -60,9 +60,7 @@ public class PaymentService {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
-        OffsetDateTime payDate = request.paymentDate() != null
-                ? request.paymentDate().atZone(IST).toOffsetDateTime()
-                : OffsetDateTime.now(IST);
+        OffsetDateTime payDate = OffsetDateTime.now(IST);
 
         Payment payment = new Payment();
         payment.setCustomer(customer);

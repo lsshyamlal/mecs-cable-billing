@@ -84,7 +84,6 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
       await recordPayment(customer.customerId, {
         amount: Number(form.amount),
         forMonth: form.forMonth || null,
-        paymentDate: form.paymentDate || null,
         paymentMethod: form.paymentMethod || null,
         notes: form.notes || null,
       });

@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public record RecordPaymentRequest(
         @NotNull(message = "Amount is required")
@@ -15,7 +14,6 @@ public record RecordPaymentRequest(
         @NotNull(message = "Month this payment is for is required (e.g. 2026-05-01)")
         LocalDate forMonth,
 
-        LocalDateTime paymentDate,
         String paymentMethod,
         String notes
 ) {}
