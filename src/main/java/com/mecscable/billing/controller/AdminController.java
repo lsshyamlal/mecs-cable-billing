@@ -3,6 +3,7 @@ package com.mecscable.billing.controller;
 import com.mecscable.billing.dto.request.ChangeAdminPasswordRequest;
 import com.mecscable.billing.dto.request.UpdateAdminProfileRequest;
 import com.mecscable.billing.dto.response.AdminProfileResponse;
+import com.mecscable.billing.dto.response.SchedulerResultResponse;
 import com.mecscable.billing.scheduler.BillingScheduler;
 import com.mecscable.billing.security.UserPrincipal;
 import com.mecscable.billing.service.AdminService;
@@ -24,9 +25,8 @@ public class AdminController {
     }
 
     @PostMapping("/scheduler/run")
-    public ResponseEntity<Void> runScheduler() {
-        billingScheduler.advanceSubscriptionStatuses();
-        return ResponseEntity.ok().build();
+    public ResponseEntity<SchedulerResultResponse> runScheduler() {
+        return ResponseEntity.ok(billingScheduler.advanceSubscriptionStatuses());
     }
 
     @GetMapping("/me")

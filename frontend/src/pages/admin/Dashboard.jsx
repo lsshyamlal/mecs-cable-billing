@@ -18,6 +18,7 @@ const SUBSCRIPTION_STATUS_GROUPS = [
 export default function Dashboard() {
   const [customers, setCustomers] = useState(null);
   const [schedulerMsg, setSchedulerMsg] = useState('');
+  const [schedulerOk, setSchedulerOk] = useState(false);
   const [schedulerLoading, setSchedulerLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -39,9 +40,13 @@ export default function Dashboard() {
   const handleRunScheduler = async () => {
     setSchedulerLoading(true);
     setSchedulerMsg('');
+    setSchedulerOk(false);
     try {
-      await runScheduler();
-      setSchedulerMsg('Scheduler ran successfully.');
+      const { data } = await runScheduler();
+      setSchedulerOk(true);
+      setSchedulerMsg(
+        `Billing scheduler complete: ${data.graceCount} moved to GRACE, ${data.pendingCount} moved to PAYMENT_PENDING`
+      );
     } catch {
       setSchedulerMsg('Failed to run scheduler.');
     } finally {
@@ -127,7 +132,7 @@ export default function Dashboard() {
           </button>
         </div>
         {schedulerMsg && (
-          <p className={`mt-3 text-sm ${schedulerMsg.includes('success') ? 'text-green-700' : 'text-red-600'}`}>
+          <p className={`mt-3 text-sm ${schedulerOk ? 'text-green-700' : 'text-red-600'}`}>
             {schedulerMsg}
           </p>
         )}

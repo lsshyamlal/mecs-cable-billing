@@ -1,5 +1,6 @@
 package com.mecscable.billing.scheduler;
 
+import com.mecscable.billing.dto.response.SchedulerResultResponse;
 import com.mecscable.billing.entity.*;
 import com.mecscable.billing.repository.CustomerRepository;
 import com.mecscable.billing.repository.SubscriptionRepository;
@@ -36,7 +37,7 @@ public class BillingScheduler {
     // Runs daily at 3:00 AM IST
     @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Kolkata")
     @Transactional
-    public void advanceSubscriptionStatuses() {
+    public SchedulerResultResponse advanceSubscriptionStatuses() {
         LocalDate today = LocalDate.now(IST);
         log.info("Billing scheduler started for date: {}", today);
 
@@ -45,6 +46,7 @@ public class BillingScheduler {
 
         log.info("Billing scheduler complete: {} moved to GRACE, {} moved to PAYMENT_PENDING",
                 graceCount, pendingCount);
+        return new SchedulerResultResponse(graceCount, pendingCount);
     }
 
     private int moveActiveToGrace(LocalDate today) {
