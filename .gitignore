@@ -29,3 +29,15 @@ logs/
 
 # Spring Boot
 spring-shell.log
+
+# Data exports / scratch files
+*.csv
+*.xlsx
+~$*
+
+# Browser cookies (curl/httpie sessions)
+cookies.txt
+frontend/cookies.txt
+
+# Claude Code internals
+.claude/worktrees/
