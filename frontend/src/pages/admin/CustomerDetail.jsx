@@ -488,7 +488,6 @@ export default function CustomerDetail() {
       <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{fullName}</h1>
-          <StatusBadge status={customer.status} />
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -535,6 +534,10 @@ export default function CustomerDetail() {
           <Field label="Area" value={customer.areaName} />
           <Field label="Address" value={address} />
           <Field label="Member Since" value={fmtDateTime(customer.accountCreatedAt)} />
+          <div>
+            <p className="text-xs font-medium text-gray-400 mb-1">Status</p>
+            <StatusBadge status={customer.status} />
+          </div>
         </div>
         <div className="mt-4 flex gap-3">
           <button

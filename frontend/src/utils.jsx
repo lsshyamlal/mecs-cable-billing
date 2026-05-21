@@ -4,7 +4,7 @@ export const STATUS_COLORS = {
   PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
   SUSPENDED: 'bg-red-100 text-red-800',
   CANCELLED: 'bg-gray-100 text-gray-700',
-  ACCOUNT_CLOSED: 'bg-gray-100 text-gray-600',
+  ACCOUNT_CLOSED: 'bg-gray-300 text-gray-800',
   PAID: 'bg-blue-100 text-blue-800',
 };
 
