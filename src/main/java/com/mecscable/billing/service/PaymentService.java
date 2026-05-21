@@ -24,17 +24,20 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final AdminRepository adminRepository;
+    private final SubscriptionPackRepository subscriptionPackRepository;
     private final AuditService auditService;
 
     public PaymentService(PaymentRepository paymentRepository,
                           CustomerRepository customerRepository,
                           SubscriptionRepository subscriptionRepository,
                           AdminRepository adminRepository,
+                          SubscriptionPackRepository subscriptionPackRepository,
                           AuditService auditService) {
         this.paymentRepository = paymentRepository;
         this.customerRepository = customerRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.adminRepository = adminRepository;
+        this.subscriptionPackRepository = subscriptionPackRepository;
         this.auditService = auditService;
     }
 
@@ -60,6 +63,11 @@ public class PaymentService {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
+        SubscriptionPack pack = null;
+        if (request.packId() != null) {
+            pack = subscriptionPackRepository.findById(request.packId()).orElse(null);
+        }
+
         OffsetDateTime payDate = OffsetDateTime.now(IST);
 
         Payment payment = new Payment();
@@ -70,9 +78,12 @@ public class PaymentService {
         payment.setPaymentMethod(request.paymentMethod());
         payment.setRecordedBy(admin);
         payment.setNotes(request.notes());
+        payment.setPack(pack);
+        payment.setManualOverride(request.manualOverride());
         payment = paymentRepository.save(payment);
 
         targetSub.setStatus(SubscriptionStatus.PAID);
+        targetSub.setPack(pack);
         subscriptionRepository.save(targetSub);
 
         // Create the next month's subscription only if one doesn't already exist
@@ -90,6 +101,7 @@ public class PaymentService {
             nextSub.setEndDate(nextEnd);
             nextSub.setStatus(SubscriptionStatus.ACTIVE);
             nextSub.setEnrolledBy(admin);
+            nextSub.setPack(pack);
             subscriptionRepository.save(nextSub);
         }
 
@@ -136,6 +148,7 @@ public class PaymentService {
         Admin a = p.getRecordedBy();
         Subscription sub = p.getSubscription();
         LocalDate forMonth = sub != null ? sub.getStartDate().withDayOfMonth(1) : null;
+        SubscriptionPack pack = p.getPack();
         return new PaymentResponse(
                 p.getPaymentId(),
                 c.getCustomerId(),
@@ -149,7 +162,10 @@ public class PaymentService {
                 a.getFirstName() + (a.getLastName() != null ? " " + a.getLastName() : ""),
                 p.getNotes(),
                 p.getCreatedAt(),
-                sub != null ? sub.getStatus().name() : null
+                sub != null ? sub.getStatus().name() : null,
+                pack != null ? pack.getPackId() : null,
+                pack != null ? pack.getPackName() : null,
+                p.isManualOverride()
         );
     }
 }

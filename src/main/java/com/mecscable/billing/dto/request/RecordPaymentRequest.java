@@ -15,5 +15,7 @@ public record RecordPaymentRequest(
         LocalDate forMonth,
 
         String paymentMethod,
-        String notes
+        String notes,
+        Long packId,
+        boolean manualOverride
 ) {}

@@ -17,5 +17,8 @@ public record PaymentResponse(
         String recordedByName,
         String notes,
         OffsetDateTime createdAt,
-        String subscriptionStatus
+        String subscriptionStatus,
+        Long packId,
+        String packName,
+        boolean manualOverride
 ) {}

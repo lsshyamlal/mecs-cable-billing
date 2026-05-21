@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import {
   getCustomer, getAreas, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
-  listPaymentsByCustomer, deleteCustomer,
+  listPaymentsByCustomer, deleteCustomer, getSubscriptionPacks,
 } from '../../api';
 import { StatusBadge, CustomerStatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
@@ -42,6 +42,7 @@ function InputRow({ label, name, value, onChange, type = 'text', required, disab
         name={name}
         value={value}
         onChange={onChange}
+        onKeyDown={type === 'number' ? (e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault() : undefined}
         required={required}
         disabled={disabled}
         className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
@@ -72,20 +73,53 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
     paymentMethod: '',
     notes: '',
   });
+  const [packs, setPacks] = useState([]);
+  const [selectedPackId, setSelectedPackId] = useState('');
+  const packRateRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    getSubscriptionPacks().then((r) => setPacks(r.data)).catch(() => {});
+  }, []);
+
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+
+  const onAmountChange = (e) => {
+    setForm((f) => ({ ...f, amount: e.target.value }));
+    if (selectedPackId && selectedPackId !== '__manual__') {
+      setSelectedPackId('__manual__');
+      packRateRef.current = null;
+    }
+  };
+
+  const onPackChange = (e) => {
+    const id = e.target.value;
+    setSelectedPackId(id);
+    if (id && id !== '__manual__') {
+      const pack = packs.find((p) => String(p.packId) === id);
+      if (pack) {
+        packRateRef.current = String(pack.monthlyRate);
+        setForm((f) => ({ ...f, amount: String(pack.monthlyRate) }));
+      }
+    } else {
+      packRateRef.current = null;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
+    const packId = (selectedPackId && selectedPackId !== '__manual__') ? Number(selectedPackId) : null;
+    const manualOverride = selectedPackId === '__manual__';
     try {
       await recordPayment(customer.customerId, {
         amount: Number(form.amount),
         forMonth: form.forMonth || null,
         paymentMethod: form.paymentMethod || null,
         notes: form.notes || null,
+        packId,
+        manualOverride,
       });
       onSuccess();
     } catch (err) {
@@ -99,7 +133,25 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
     <Modal title="Record Payment" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalError msg={error} />
-        <InputRow label="Amount (₹)" name="amount" type="number" value={form.amount} onChange={onChange} required />
+        {packs.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pack</label>
+            <select
+              value={selectedPackId}
+              onChange={onPackChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">Select pack to fill amount…</option>
+              <option value="__manual__">Manual Override</option>
+              {packs.map((p) => (
+                <option key={p.packId} value={p.packId}>
+                  {p.packName} — ₹{Number(p.monthlyRate).toFixed(2)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <InputRow label="Amount (₹)" name="amount" type="number" value={form.amount} onChange={onAmountChange} required />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">For Month<span className="text-red-500 ml-0.5">*</span></label>
           <div className="flex gap-2">
@@ -589,6 +641,9 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
             <Field label="Monthly Rate" value={fmtCurrency(customer.currentPaymentAmount)} />
+            {customer.currentPackName && (
+              <Field label="Pack" value={customer.currentPackName} />
+            )}
             {customer.subscriptionStatus !== 'PAID' && (
               <Field label="Due Date" value={fmtDate(customer.currentPaymentDueDate)} />
             )}

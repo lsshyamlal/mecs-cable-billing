@@ -27,5 +27,8 @@ public record CustomerResponse(
         LocalDate currentSubscriptionStart,
         LocalDate currentSubscriptionEnd,
         LocalDate gracePeriodDeadline,
-        OffsetDateTime accountCreatedAt
+        OffsetDateTime accountCreatedAt,
+        String futureSubscriptionStatus,
+        Long currentPackId,
+        String currentPackName
 ) {}

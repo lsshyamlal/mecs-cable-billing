@@ -49,6 +49,10 @@ public class Subscription {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pack_id")
+    private SubscriptionPack pack;
+
     @Column(name = "notes")
     private String notes;
 }

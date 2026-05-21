@@ -165,22 +165,21 @@ public class CustomerService {
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
-        // GRACE/PAYMENT_PENDING subscriptions: mark PAID if admin confirmed payment was collected,
-        // otherwise SUSPENDED to preserve the unpaid debt in history.
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         SubscriptionStatus outstandingResolution = paymentCollected ? SubscriptionStatus.PAID : SubscriptionStatus.SUSPENDED;
-        List<Subscription> currentSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
-                customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING));
-        for (Subscription sub : currentSubs) {
-            sub.setStatus(outstandingResolution);
-            subscriptionRepository.save(sub);
-        }
 
-        // Pre-created next-month subscriptions (ACTIVE = future-dated) are cancelled since
-        // the account is closing and they will never be used.
-        List<Subscription> futureSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
-                customer, List.of(SubscriptionStatus.ACTIVE));
-        for (Subscription sub : futureSubs) {
-            sub.setStatus(SubscriptionStatus.CANCELLED);
+        // Resolve any open subscriptions for the current period (GRACE, PAYMENT_PENDING, or a
+        // current-month ACTIVE that the scheduler hasn't transitioned yet).
+        List<Subscription> currentSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
+                customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING, SubscriptionStatus.ACTIVE));
+        for (Subscription sub : currentSubs) {
+            if (sub.getStartDate().isAfter(today)) {
+                // Genuinely future-dated pre-created subscription — cancel it.
+                sub.setStatus(SubscriptionStatus.CANCELLED);
+            } else {
+                // Current-period subscription — resolve based on whether payment was collected.
+                sub.setStatus(outstandingResolution);
+            }
             subscriptionRepository.save(sub);
         }
 
@@ -271,16 +270,27 @@ public class CustomerService {
     private CustomerResponse toResponse(Customer c) {
         String subscriptionStatus = null;
         LocalDate gracePeriodDeadline = null;
+        Long currentPackId = null;
+        String currentPackName = null;
         if (c.getCurrentSubscriptionStart() != null) {
-            subscriptionStatus = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart())
-                    .map(s -> s.getStatus().name())
-                    .orElse(null);
+            var currentSub = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart());
+            subscriptionStatus = currentSub.map(s -> s.getStatus().name()).orElse(null);
+            currentPackId = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackId() : null).orElse(null);
+            currentPackName = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackName() : null).orElse(null);
             if (c.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
                 int gracePeriodDay = c.getArea().getGracePeriodDay();
                 LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
                 gracePeriodDeadline = rawDeadline.isBefore(c.getCurrentSubscriptionStart())
                         ? c.getCurrentSubscriptionStart() : rawDeadline;
             }
+        }
+        String futureSubscriptionStatus = null;
+        if (c.getCurrentSubscriptionEnd() != null) {
+            LocalDate futureStart = c.getCurrentSubscriptionEnd().plusDays(1);
+            futureSubscriptionStatus = subscriptionRepository
+                    .findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, futureStart)
+                    .map(s -> s.getStatus().name())
+                    .orElse(null);
         }
         return new CustomerResponse(
                 c.getCustomerId(),
@@ -305,7 +315,10 @@ public class CustomerService {
                 c.getCurrentSubscriptionStart(),
                 c.getCurrentSubscriptionEnd(),
                 gracePeriodDeadline,
-                c.getAccountCreatedAt()
+                c.getAccountCreatedAt(),
+                futureSubscriptionStatus,
+                currentPackId,
+                currentPackName
         );
     }
 }

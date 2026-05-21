@@ -42,6 +42,13 @@ public class Payment {
     @JoinColumn(name = "recorded_by", nullable = false)
     private Admin recordedBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pack_id")
+    private SubscriptionPack pack;
+
+    @Column(name = "is_manual_override", nullable = false)
+    private boolean manualOverride = false;
+
     @Column(name = "notes")
     private String notes;
 
