@@ -150,7 +150,8 @@ public class PaymentService {
                 a.getAdminId(),
                 a.getFirstName() + (a.getLastName() != null ? " " + a.getLastName() : ""),
                 p.getNotes(),
-                p.getCreatedAt()
+                p.getCreatedAt(),
+                sub != null ? sub.getStatus().name() : null
         );
     }
 }

@@ -523,6 +523,7 @@ export default function CustomerDetail() {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">For Month</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Date</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Method</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Recorded By</th>
@@ -534,6 +535,7 @@ export default function CustomerDetail() {
                   <tr key={p.paymentId} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800">{fmtDate(p.forMonth)}</td>
                     <td className="px-4 py-3 text-gray-800 font-semibold">{fmtCurrency(p.amount)}</td>
+                    <td className="px-4 py-3"><StatusBadge status={p.subscriptionStatus} /></td>
                     <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{fmtDateTime(p.paymentDate)}</td>
                     <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{p.paymentMethod || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{p.recordedByName || '—'}</td>
