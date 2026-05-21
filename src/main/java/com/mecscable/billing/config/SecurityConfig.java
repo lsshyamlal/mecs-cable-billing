@@ -1,6 +1,7 @@
 package com.mecscable.billing.config;
 
 import com.mecscable.billing.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,7 +51,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/**").hasRole("ADMIN")
                 .anyRequest().permitAll()  // SPA static assets + React Router paths; React handles client-side auth
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\"}");
+                })
+            );
 
         return http.build();
     }
