@@ -2,6 +2,7 @@ package com.mecscable.billing.controller;
 
 import com.mecscable.billing.dto.response.ErrorResponse;
 import com.mecscable.billing.exception.ResourceNotFoundException;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -57,6 +58,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("INVALID_REQUEST", e.getMessage()));
+    }
+
+    @ExceptionHandler(IncorrectResultSizeDataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateResult(IncorrectResultSizeDataAccessException e) {
+        log.error("Duplicate record lookup: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("DUPLICATE_RECORD", "Multiple accounts found with this identifier. Please contact support."));
     }
 
     @ExceptionHandler(Exception.class)

@@ -91,6 +91,9 @@ public class CustomerService {
                     .ifPresent(c -> { throw new IllegalArgumentException("STB ID already assigned to an active customer"); });
         }
 
+        customerRepository.findByPhone(request.phone())
+                .ifPresent(c -> { throw new IllegalArgumentException("Phone number already registered to another customer"); });
+
         Customer customer = new Customer();
         customer.setFirstName(request.firstName());
         customer.setLastName(request.lastName());
@@ -123,7 +126,12 @@ public class CustomerService {
         if (request.lastName() != null) customer.setLastName(request.lastName());
         if (request.doorNumber() != null) customer.setDoorNumber(request.doorNumber());
         if (request.streetName() != null) customer.setStreetName(request.streetName());
-        if (request.phone() != null) customer.setPhone(request.phone());
+        if (request.phone() != null) {
+            customerRepository.findByPhone(request.phone())
+                    .filter(c -> !c.getCustomerId().equals(customerId))
+                    .ifPresent(c -> { throw new IllegalArgumentException("Phone number already registered to another customer"); });
+            customer.setPhone(request.phone());
+        }
         if (request.email() != null) customer.setEmail(request.email());
         if (request.upiId() != null) customer.setUpiId(request.upiId());
 
