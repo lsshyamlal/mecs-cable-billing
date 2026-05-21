@@ -459,6 +459,7 @@ export default function CustomerDetail() {
           <Field label="Email" value={customer.email} />
           <Field label="STB ID" value={customer.stbId} />
           <Field label="UPI ID" value={customer.upiId} />
+          <Field label="Area" value={customer.areaName} />
           <Field label="Address" value={address} />
           <Field label="Member Since" value={fmtDateTime(customer.accountCreatedAt)} />
         </div>
