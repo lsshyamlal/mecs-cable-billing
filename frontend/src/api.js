@@ -14,7 +14,10 @@ function processQueue(error) {
 }
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    localStorage.setItem('mecs_last_activity', String(Date.now()));
+    return res;
+  },
   async (error) => {
     const original = error.config;
     if (error.response?.status === 401 && !original._retry && original.url !== '/auth/login') {
@@ -49,6 +52,10 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Bypasses the response interceptor so it doesn't update lastActivityAt or trigger the retry loop.
+export const ping = () =>
+  axios.get('/api/auth/ping', { withCredentials: true });
 
 export const login = (identifier, password) =>
   api.post('/auth/login', { identifier, password });

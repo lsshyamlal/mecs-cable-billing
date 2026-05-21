@@ -1,5 +1,6 @@
 package com.mecscable.billing.controller;
 
+import com.mecscable.billing.config.ServerInstance;
 import com.mecscable.billing.dto.request.LoginRequest;
 import com.mecscable.billing.dto.response.LoginResponse;
 import com.mecscable.billing.service.AuthService;
@@ -7,19 +8,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final ServerInstance serverInstance;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, ServerInstance serverInstance) {
         this.authService = authService;
+        this.serverInstance = serverInstance;
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<Map<String, String>> ping() {
+        return ResponseEntity.ok(Map.of("instanceId", serverInstance.getInstanceId()));
     }
 
     @PostMapping("/login")

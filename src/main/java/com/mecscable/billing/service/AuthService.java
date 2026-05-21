@@ -1,5 +1,6 @@
 package com.mecscable.billing.service;
 
+import com.mecscable.billing.config.ServerInstance;
 import com.mecscable.billing.dto.request.LoginRequest;
 import com.mecscable.billing.dto.response.LoginResponse;
 import com.mecscable.billing.entity.Admin;
@@ -31,6 +32,7 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ServerInstance serverInstance;
 
     @Value("${mecs.jwt.access-token-expiry-ms}")
     private long accessTokenExpiryMs;
@@ -44,11 +46,13 @@ public class AuthService {
     public AuthService(AdminRepository adminRepository,
                        CustomerRepository customerRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       ServerInstance serverInstance) {
         this.adminRepository = adminRepository;
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.serverInstance = serverInstance;
     }
 
     public LoginResponse login(LoginRequest request, HttpServletResponse response) {
@@ -165,13 +169,13 @@ public class AuthService {
         String name = admin.getFirstName()
                 + (admin.getLastName() != null ? " " + admin.getLastName() : "");
         return new LoginResponse("ROLE_ADMIN", admin.getAdminId(), name, admin.getEmail(),
-                System.currentTimeMillis() + refreshTokenExpiryMs);
+                System.currentTimeMillis() + refreshTokenExpiryMs, serverInstance.getInstanceId());
     }
 
     private LoginResponse toLoginResponse(Customer customer) {
         String name = customer.getFirstName()
                 + (customer.getLastName() != null ? " " + customer.getLastName() : "");
         return new LoginResponse("ROLE_CUSTOMER", customer.getCustomerId(), name, customer.getEmail(),
-                System.currentTimeMillis() + refreshTokenExpiryMs);
+                System.currentTimeMillis() + refreshTokenExpiryMs, serverInstance.getInstanceId());
     }
 }

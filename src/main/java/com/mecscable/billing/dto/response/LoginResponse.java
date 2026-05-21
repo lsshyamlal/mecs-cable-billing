@@ -5,5 +5,6 @@ public record LoginResponse(
         Long userId,
         String name,
         String email,
-        long sessionExpiresAt
+        long sessionExpiresAt,
+        String serverInstanceId
 ) {}

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { ping } from '../api';
 
 const AuthContext = createContext(null);
+const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(() => {
@@ -10,20 +12,39 @@ export function AuthProvider({ children }) {
 
   const signIn = (data) => {
     localStorage.setItem('mecs_auth', JSON.stringify(data));
+    localStorage.setItem('mecs_last_activity', String(Date.now()));
     setAuth(data);
   };
 
   const signOut = () => {
     localStorage.removeItem('mecs_auth');
+    localStorage.removeItem('mecs_last_activity');
     setAuth(null);
   };
 
-  // Auto-logout when the refresh token (session) expires
   useEffect(() => {
-    if (!auth?.sessionExpiresAt) return;
+    if (!auth) return;
 
+    // On every page load, check whether the server has restarted since the last login.
+    ping()
+      .then(({ data }) => {
+        if (auth.serverInstanceId && data.instanceId !== auth.serverInstanceId) {
+          signOut();
+          window.location.href = '/login?restart=1';
+        }
+      })
+      .catch((err) => {
+        if (!err.response) {
+          // Server unreachable — treat as maintenance restart.
+          signOut();
+          window.location.href = '/login?restart=1';
+        }
+      });
+
+    // Idle timeout: auto-logout after 2 hours with no API activity.
     const check = () => {
-      if (Date.now() >= auth.sessionExpiresAt) {
+      const lastActivity = Number(localStorage.getItem('mecs_last_activity') || Date.now());
+      if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) {
         const name = auth.name;
         signOut();
         const params = new URLSearchParams({ expired: '1' });
@@ -35,7 +56,7 @@ export function AuthProvider({ children }) {
     check();
     const id = setInterval(check, 60_000);
     return () => clearInterval(id);
-  }, [auth?.sessionExpiresAt]);
+  }, [auth]);
 
   return (
     <AuthContext.Provider value={{ auth, signIn, signOut }}>

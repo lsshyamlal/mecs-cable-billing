@@ -15,6 +15,7 @@ export default function Login() {
   const searchParams = new URLSearchParams(location.search);
   const sessionExpired = searchParams.get('expired') === '1';
   const expiredUser = searchParams.get('user');
+  const serverRestarted = searchParams.get('restart') === '1';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +51,12 @@ export default function Login() {
           <h1 className="text-xl font-bold text-gray-800">MECS Cable TV</h1>
           <p className="text-sm text-gray-500 mt-1">Billing Portal</p>
         </div>
+
+        {serverRestarted && (
+          <div className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4">
+            System restarted for maintenance. Please sign in again.
+          </div>
+        )}
 
         {sessionExpired && (
           <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
