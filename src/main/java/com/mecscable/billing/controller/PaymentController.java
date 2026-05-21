@@ -11,8 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -36,6 +39,14 @@ public class PaymentController {
     @GetMapping("/{customerId}")
     public ResponseEntity<List<PaymentResponse>> listByCustomer(@PathVariable Long customerId) {
         return ResponseEntity.ok(paymentService.listByCustomer(customerId));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<Map<String, Object>> monthlySummary(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+        YearMonth target = (month != null) ? month : YearMonth.now();
+        BigDecimal total = paymentService.monthTotal(target);
+        return ResponseEntity.ok(Map.of("total", total, "month", target.toString()));
     }
 
     @GetMapping

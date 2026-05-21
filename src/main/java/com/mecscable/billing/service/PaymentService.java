@@ -8,9 +8,11 @@ import com.mecscable.billing.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -136,6 +138,12 @@ public class PaymentService {
             payments = paymentRepository.findAll();
         }
         return payments.stream().map(this::toResponse).toList();
+    }
+
+    public BigDecimal monthTotal(YearMonth month) {
+        OffsetDateTime from = month.atDay(1).atStartOfDay(IST).toOffsetDateTime();
+        OffsetDateTime to = month.atEndOfMonth().atTime(LocalTime.MAX).atZone(IST).toOffsetDateTime();
+        return paymentRepository.sumAmountByPaymentDateBetween(from, to);
     }
 
     private Customer findCustomer(Long customerId) {

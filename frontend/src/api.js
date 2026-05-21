@@ -96,6 +96,8 @@ export const deleteCustomer = (id) => api.delete(`/customers/${id}`);
 export const recordPayment = (customerId, data) => api.post(`/payments/${customerId}`, data);
 export const listPaymentsByCustomer = (customerId) => api.get(`/payments/${customerId}`);
 export const listAllPayments = (params) => api.get('/payments', { params });
+export const getMonthlyPaymentSummary = (month) =>
+  api.get('/payments/summary', month ? { params: { month } } : {});
 
 // ── Reports ──────────────────────────────────────────────────
 export const getPaymentReport = (params) => api.get('/reports/payments', { params });
