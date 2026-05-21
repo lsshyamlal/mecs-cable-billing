@@ -66,7 +66,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
   const todayIST = nowIST().substring(0, 10);
   const [form, setForm] = useState({
     amount: customer.currentPaymentAmount ?? '',
-    forMonth: todayIST.substring(0, 7) + '-01',
+    forMonth: customer.currentSubscriptionStart ?? todayIST.substring(0, 7) + '-01',
     paymentDate: nowIST(),
     paymentMethod: '',
     notes: '',
@@ -102,14 +102,38 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
         <InputRow label="Amount (₹)" name="amount" type="number" value={form.amount} onChange={onChange} required />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">For Month<span className="text-red-500 ml-0.5">*</span></label>
-          <input
-            type="month"
-            name="forMonth"
-            value={form.forMonth?.substring(0, 7)}
-            onChange={(e) => setForm((f) => ({ ...f, forMonth: e.target.value + '-01' }))}
-            required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex gap-2">
+            <select
+              value={form.forMonth ? form.forMonth.substring(5, 7) : ''}
+              onChange={(e) => {
+                const yr = form.forMonth ? form.forMonth.substring(0, 4) : new Date().getFullYear().toString();
+                setForm((f) => ({ ...f, forMonth: `${yr}-${e.target.value}-01` }));
+              }}
+              required
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Month</option>
+              {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
+                <option key={m} value={m}>
+                  {new Date(2000, i).toLocaleString('en-IN', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={form.forMonth ? form.forMonth.substring(0, 4) : ''}
+              onChange={(e) => {
+                const mo = form.forMonth ? form.forMonth.substring(5, 7) : '01';
+                setForm((f) => ({ ...f, forMonth: `${e.target.value}-${mo}-01` }));
+              }}
+              required
+              className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Year</option>
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((yr) => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <InputRow label="Payment Date & Time" name="paymentDate" type="datetime-local" value={form.paymentDate} onChange={onChange} />
         <div>
