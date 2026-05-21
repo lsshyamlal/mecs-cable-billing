@@ -22,7 +22,7 @@ export default function CustomerForm() {
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
     upiId: '', stbId: '', doorNumber: '', streetName: '',
-    areaId: '', monthlyRate: '', subscriptionStartDate: '',
+    areaId: '', subscriptionStartDate: '',
     portalPassword: '',
   });
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,6 @@ export default function CustomerForm() {
         doorNumber: form.doorNumber || null,
         streetName: form.streetName || null,
         areaId: form.areaId ? Number(form.areaId) : null,
-        monthlyRate: Number(form.monthlyRate),
         subscriptionStartDate: form.subscriptionStartDate || null,
         portalPassword: form.portalPassword || null,
       });
@@ -127,9 +126,6 @@ export default function CustomerForm() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Subscription</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Monthly Rate (₹)" required>
-              <input name="monthlyRate" type="number" min="0" step="0.01" value={form.monthlyRate} onChange={onChange} required className={INPUT} />
-            </Field>
             <Field label="Subscription Start Date">
               <input name="subscriptionStartDate" type="date" value={form.subscriptionStartDate} onChange={onChange} className={INPUT} />
               <p className="text-xs text-gray-400 mt-1">Leave blank to use today's date.</p>

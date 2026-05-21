@@ -3,7 +3,8 @@
     "allow": [
       "WebFetch(domain:github.com)",
       "Bash(gh repo *)",
-      "WebFetch(domain:spring.io)"
+      "WebFetch(domain:spring.io)",
+      "Bash(git push *)"
     ]
   }
 }

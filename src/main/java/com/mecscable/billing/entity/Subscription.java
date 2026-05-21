@@ -28,7 +28,7 @@ public class Subscription {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @Column(name = "monthly_rate", nullable = false, precision = 10, scale = 2)
+    @Column(name = "monthly_rate", precision = 10, scale = 2)
     private BigDecimal monthlyRate;
 
     @Column(name = "start_date", nullable = false)

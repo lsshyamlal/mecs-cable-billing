@@ -112,7 +112,7 @@ public class CustomerService {
 
         customer = customerRepository.save(customer);
 
-        createSubscription(customer, request.monthlyRate(), request.subscriptionStartDate(), adminId);
+        createSubscription(customer, null, request.subscriptionStartDate(), adminId);
 
         auditService.log(adminId, "CREATE_CUSTOMER", "Customer", customer.getCustomerId(), null);
         return toResponse(customerRepository.findById(customer.getCustomerId()).orElseThrow());
