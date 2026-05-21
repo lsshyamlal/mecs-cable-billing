@@ -493,7 +493,9 @@ export default function CustomerDetail() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setModal('payment')}
-            className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition"
+            disabled={customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED'}
+            title={customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED' ? 'Re-enroll the customer before recording a payment' : undefined}
+            className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
           >
             Record Payment
           </button>
