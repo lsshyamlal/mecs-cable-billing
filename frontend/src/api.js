@@ -6,28 +6,44 @@ const api = axios.create({
 });
 
 let isRefreshing = false;
+let failedQueue = [];
+
+function processQueue(error) {
+  failedQueue.forEach(({ resolve, reject }) => error ? reject(error) : resolve());
+  failedQueue = [];
+}
 
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
     if (error.response?.status === 401 && !original._retry && original.url !== '/auth/login') {
-      if (isRefreshing) return Promise.reject(error);
+      if (isRefreshing) {
+        // Queue this request; retry it once the in-flight refresh completes.
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          original._retry = true;
+          return api(original);
+        }).catch(Promise.reject);
+      }
       original._retry = true;
       isRefreshing = true;
       try {
         await axios.post('/api/auth/refresh', {}, { withCredentials: true });
         isRefreshing = false;
+        processQueue(null);
         return api(original);
-      } catch {
+      } catch (err) {
         isRefreshing = false;
+        processQueue(err);
         const stored = localStorage.getItem('mecs_auth');
         const name = stored ? JSON.parse(stored).name : null;
         localStorage.removeItem('mecs_auth');
         const params = new URLSearchParams({ expired: '1' });
         if (name) params.set('user', name);
         window.location.href = `/login?${params}`;
-        return Promise.reject(error);
+        return Promise.reject(err);
       }
     }
     return Promise.reject(error);
