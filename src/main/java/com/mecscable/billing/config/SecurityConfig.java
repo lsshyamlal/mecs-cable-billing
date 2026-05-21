@@ -19,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -66,14 +67,35 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigin));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        // Per-request source: allows the configured dev origin plus any same-host origin
+        // (handles Cloudflare Tunnel and other reverse proxies without hardcoding the URL)
+        return request -> {
+            String origin = request.getHeader("Origin");
+            if (origin == null) return null;
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
-        return source;
+            boolean isSameHost = isSameHost(origin, request);
+            boolean isAllowedOrigin = Arrays.asList(allowedOrigin.split(","))
+                    .stream().map(String::trim).anyMatch(origin::equals);
+
+            if (!isSameHost && !isAllowedOrigin) return null;
+
+            CorsConfiguration config = new CorsConfiguration();
+            config.setAllowedOrigins(List.of(origin));
+            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            config.setAllowedHeaders(List.of("*"));
+            config.setAllowCredentials(true);
+            return config;
+        };
+    }
+
+    private boolean isSameHost(String origin, jakarta.servlet.http.HttpServletRequest request) {
+        // Check X-Forwarded-Host first (set by Cloudflare / reverse proxies)
+        String forwardedHost = request.getHeader("X-Forwarded-Host");
+        String host = (forwardedHost != null) ? forwardedHost.split(",")[0].trim()
+                                              : request.getHeader("Host");
+        if (host == null) return false;
+        // Strip port from host for comparison
+        String hostName = host.split(":")[0];
+        return origin.contains(hostName);
     }
 }
