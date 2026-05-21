@@ -5,13 +5,29 @@ export const STATUS_COLORS = {
   SUSPENDED: 'bg-red-100 text-red-800',
   CANCELLED: 'bg-gray-100 text-gray-700',
   ACCOUNT_CLOSED: 'bg-gray-300 text-gray-800',
-  PAID: 'bg-blue-100 text-blue-800',
+  PAID: 'bg-green-100 text-green-800',
 };
 
 const STATUS_LABELS = {
   ACCOUNT_CLOSED: 'Account Closed',
   PAYMENT_PENDING: 'Payment Pending',
 };
+
+const CUSTOMER_STATUS_COLORS = {
+  ACTIVE:         'bg-green-700 text-white',
+  SUSPENDED:      'bg-red-700 text-white',
+  ACCOUNT_CLOSED: 'bg-gray-700 text-white',
+};
+
+export function CustomerStatusBadge({ status }) {
+  const colorClass = CUSTOMER_STATUS_COLORS[status] || 'bg-gray-700 text-white';
+  const label = STATUS_LABELS[status] || status?.replace(/_/g, ' ');
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${colorClass}`}>
+      {label}
+    </span>
+  );
+}
 
 export function StatusBadge({ status }) {
   const colorClass = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700';

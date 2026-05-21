@@ -6,7 +6,7 @@ import {
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer,
 } from '../../api';
-import { StatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
+import { StatusBadge, CustomerStatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -536,7 +536,7 @@ export default function CustomerDetail() {
           <Field label="Member Since" value={fmtDateTime(customer.accountCreatedAt)} />
           <div>
             <p className="text-xs font-medium text-gray-400 mb-1">Status</p>
-            <StatusBadge status={customer.status} />
+            <CustomerStatusBadge status={customer.status} />
           </div>
         </div>
         <div className="mt-4 flex gap-3">
