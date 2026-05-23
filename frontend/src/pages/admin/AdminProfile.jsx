@@ -7,15 +7,17 @@ import { useAuth } from '../../context/AuthContext';
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
       {children}
     </div>
   );
 }
 
 function inputClass(disabled) {
-  return `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-    disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-800'
+  return `w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    disabled
+      ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+      : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100'
   }`;
 }
 
@@ -61,7 +63,6 @@ export default function AdminProfile() {
       setProfile(r.data);
       setProfileEditing(false);
       setProfileSuccess('Profile updated successfully.');
-      // Update the name shown in the header
       if (auth) {
         const fullName = [r.data.firstName, r.data.lastName].filter(Boolean).join(' ');
         signIn({ ...auth, name: fullName, email: r.data.email });
@@ -118,16 +119,16 @@ export default function AdminProfile() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">My Profile</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">My Profile</h1>
 
       {/* Profile information */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Profile Information</h2>
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profile Information</h2>
           {!profileEditing && profile && (
             <button
               onClick={() => { setProfileEditing(true); setProfileSuccess(''); setProfileError(''); }}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
             >
               Edit
             </button>
@@ -135,15 +136,15 @@ export default function AdminProfile() {
         </div>
 
         {profileError && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{profileError}</div>
+          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 mb-4">{profileError}</div>
         )}
         {profileSuccess && (
-          <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">{profileSuccess}</div>
+          <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-lg px-3 py-2 mb-4">{profileSuccess}</div>
         )}
 
         {profile === null ? (
           <div className="space-y-3 animate-pulse">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-9 bg-gray-100 rounded-lg" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-9 bg-gray-100 dark:bg-gray-700 rounded-lg" />)}
           </div>
         ) : (
           <form onSubmit={handleProfileSave}>
@@ -201,7 +202,7 @@ export default function AdminProfile() {
                 <button
                   type="button"
                   onClick={handleProfileCancel}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                 >
                   Cancel
                 </button>
@@ -211,32 +212,32 @@ export default function AdminProfile() {
         )}
       </div>
 
-      {/* Account info (read-only) */}
+      {/* Account info */}
       {profile && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Account Details</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-6">
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Account Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Account Created</p>
-              <p className="font-medium text-gray-800">{fmtDateTime(profile.createdAt)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Account Created</p>
+              <p className="font-medium text-gray-800 dark:text-gray-100">{fmtDateTime(profile.createdAt)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Last Login</p>
-              <p className="font-medium text-gray-800">{fmtDateTime(profile.lastLoginAt)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Last Login</p>
+              <p className="font-medium text-gray-800 dark:text-gray-100">{fmtDateTime(profile.lastLoginAt)}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Change password */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-5">Change Password</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-5">Change Password</h2>
 
         {pwError && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{pwError}</div>
+          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 mb-4">{pwError}</div>
         )}
         {pwSuccess && (
-          <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">{pwSuccess}</div>
+          <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-lg px-3 py-2 mb-4">{pwSuccess}</div>
         )}
 
         <form onSubmit={handlePwSave} className="space-y-4 max-w-sm">

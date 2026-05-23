@@ -7,8 +7,8 @@ import { StatusBadge, fmtDate, fmtDateTime } from '../utils';
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-gray-800">{value}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{value}</p>
     </div>
   );
 }
@@ -41,7 +41,7 @@ export default function PortalHome() {
   if (error) {
     return (
       <Layout>
-        <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">{error}</div>
+        <div className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>
       </Layout>
     );
   }
@@ -50,9 +50,9 @@ export default function PortalHome() {
     return (
       <Layout>
         <div className="space-y-4 animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-40" />
-          <div className="h-32 bg-gray-100 rounded-2xl" />
-          <div className="h-28 bg-gray-100 rounded-2xl" />
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40" />
+          <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded-2xl" />
+          <div className="h-28 bg-gray-100 dark:bg-gray-700 rounded-2xl" />
         </div>
       </Layout>
     );
@@ -64,10 +64,10 @@ export default function PortalHome() {
 
   return (
     <Layout>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">My Account</h2>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">My Account</h2>
 
       {profile.status === 'SUSPENDED' && portalAccessExpiry && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-5 text-sm text-red-700">
+        <div className="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 mb-5 text-sm text-red-700 dark:text-red-300">
           <span className="font-semibold">Your account is suspended.</span> Your information is available in
           read-only mode until <span className="font-semibold">{portalAccessExpiry}</span>.
           Contact your cable operator to re-activate your subscription.
@@ -75,8 +75,8 @@ export default function PortalHome() {
       )}
 
       {/* Profile card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Profile</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-5">
+        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Profile</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
           <Field label="Name" value={fullName} />
           <Field label="Phone" value={profile.phone} />
@@ -86,39 +86,30 @@ export default function PortalHome() {
           <Field label="Area" value={profile.area || '—'} />
           <Field label="Member Since" value={fmtDateTime(profile.accountCreatedAt)} />
           <div>
-            <p className="text-xs text-gray-500 mb-1">Account Status</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Account Status</p>
             <StatusBadge status={profile.status} />
           </div>
         </div>
       </div>
 
       {/* Current subscription card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Current Subscription</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-5">
+        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Current Subscription</h3>
         {sub.startDate ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-            <Field
-              label="Period"
-              value={`${fmtDate(sub.startDate)} – ${fmtDate(sub.endDate)}`}
-            />
-            <Field
-              label="Monthly Rate"
-              value={sub.monthlyRate ? `₹${Number(sub.monthlyRate).toFixed(0)}` : '—'}
-            />
+            <Field label="Period" value={`${fmtDate(sub.startDate)} – ${fmtDate(sub.endDate)}`} />
+            <Field label="Monthly Rate" value={sub.monthlyRate ? `₹${Number(sub.monthlyRate).toFixed(0)}` : '—'} />
             <Field label="Due Date" value={fmtDate(sub.dueDate)} />
             <div>
-              <p className="text-xs text-gray-500 mb-1">Payment Status</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Payment Status</p>
               <StatusBadge status={sub.status} />
             </div>
             {sub.gracePeriodDeadline && (
-              <Field
-                label="Grace Period Deadline"
-                value={fmtDate(sub.gracePeriodDeadline)}
-              />
+              <Field label="Grace Period Deadline" value={fmtDate(sub.gracePeriodDeadline)} />
             )}
             {sub.paymentPending && (
               <div className="sm:col-span-2 mt-1">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-700 font-medium">
+                <div className="bg-orange-50 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-sm text-orange-700 dark:text-orange-300 font-medium">
                   Payment is pending for this subscription period.
                   {sub.gracePeriodDeadline && (
                     <span> Please pay by {fmtDate(sub.gracePeriodDeadline)} to avoid service interruption.</span>
@@ -128,14 +119,14 @@ export default function PortalHome() {
             )}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">No active subscription on record.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No active subscription on record.</p>
         )}
       </div>
 
       {/* History navigation */}
       <button
         onClick={() => navigate('/portal/history')}
-        className="flex items-center gap-1.5 text-blue-700 text-sm font-medium hover:text-blue-900 transition"
+        className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 text-sm font-medium hover:text-blue-900 dark:hover:text-blue-300 transition"
       >
         View Subscription History
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

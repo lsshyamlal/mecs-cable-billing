@@ -8,13 +8,15 @@ import {
 } from '../../api';
 import { StatusBadge, CustomerStatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
+const INPUT = 'w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-800">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition text-xl leading-none">&times;</button>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition text-xl leading-none">&times;</button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
@@ -25,8 +27,8 @@ function Modal({ title, onClose, children }) {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-gray-800">{value || '—'}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{value || '—'}</p>
     </div>
   );
 }
@@ -34,7 +36,7 @@ function Field({ label, value }) {
 function InputRow({ label, name, value, onChange, type = 'text', required, disabled }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <input
@@ -45,7 +47,7 @@ function InputRow({ label, name, value, onChange, type = 'text', required, disab
         onKeyDown={type === 'number' ? (e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault() : undefined}
         required={required}
         disabled={disabled}
-        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+        className={`${INPUT} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
     </div>
   );
@@ -54,7 +56,7 @@ function InputRow({ label, name, value, onChange, type = 'text', required, disab
 function ModalError({ msg }) {
   if (!msg) return null;
   return (
-    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{msg}</div>
+    <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 mb-3">{msg}</div>
   );
 }
 
@@ -135,11 +137,11 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
         <ModalError msg={error} />
         {packs.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pack</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pack</label>
             <select
               value={selectedPackId}
               onChange={onPackChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className={INPUT}
             >
               <option value="">Select pack to fill amount…</option>
               <option value="__manual__">Manual Override</option>
@@ -153,7 +155,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
         )}
         <InputRow label="Amount (₹)" name="amount" type="number" value={form.amount} onChange={onAmountChange} required />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">For Month<span className="text-red-500 ml-0.5">*</span></label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">For Month<span className="text-red-500 ml-0.5">*</span></label>
           <div className="flex gap-2">
             <select
               value={form.forMonth ? form.forMonth.substring(5, 7) : ''}
@@ -162,7 +164,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
                 setForm((f) => ({ ...f, forMonth: `${yr}-${e.target.value}-01` }));
               }}
               required
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`flex-1 ${INPUT}`}
             >
               <option value="">Month</option>
               {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
@@ -178,7 +180,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
                 setForm((f) => ({ ...f, forMonth: `${e.target.value}-${mo}-01` }));
               }}
               required
-              className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-28 ${INPUT}`}
             >
               <option value="">Year</option>
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((yr) => (
@@ -189,14 +191,8 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
         </div>
         <InputRow label="Payment Date" name="paymentDate" type="date" value={form.paymentDate} onChange={onChange} disabled />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method<span className="text-red-500 ml-0.5">*</span></label>
-          <select
-            name="paymentMethod"
-            value={form.paymentMethod}
-            onChange={onChange}
-            required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method<span className="text-red-500 ml-0.5">*</span></label>
+          <select name="paymentMethod" value={form.paymentMethod} onChange={onChange} required className={INPUT}>
             <option value="">Select…</option>
             <option>CASH</option>
             <option>UPI</option>
@@ -205,13 +201,13 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
           <textarea
             name="notes"
             value={form.notes}
             onChange={onChange}
             rows={2}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className={`${INPUT} resize-none`}
           />
         </div>
         <div className="flex gap-2 pt-1">
@@ -220,7 +216,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
             {loading ? 'Saving…' : 'Record Payment'}
           </button>
           <button type="button" onClick={onClose}
-            className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             Cancel
           </button>
         </div>
@@ -254,7 +250,7 @@ function ReEnrollModal({ customerId, onClose, onSuccess }) {
     <Modal title="Re-enroll Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalError msg={error} />
-        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">Re-enrolls at the customer's existing subscription rate. Record payment separately after re-enrolling.</p>
+        <p className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2">Re-enrolls at the customer's existing subscription rate. Record payment separately after re-enrolling.</p>
         <InputRow label="Start Date" name="startDate" type="date" value={form.startDate} onChange={onChange} />
         <div className="flex gap-2 pt-1">
           <button type="submit" disabled={loading}
@@ -262,7 +258,7 @@ function ReEnrollModal({ customerId, onClose, onSuccess }) {
             {loading ? 'Saving…' : 'Re-enroll'}
           </button>
           <button type="button" onClick={onClose}
-            className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             Cancel
           </button>
         </div>
@@ -295,14 +291,14 @@ function ResetPasswordModal({ customerId, onClose, onSuccess }) {
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalError msg={error} />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">New Password<span className="text-red-500 ml-0.5">*</span></label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password<span className="text-red-500 ml-0.5">*</span></label>
           <input
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={INPUT}
           />
         </div>
         <div className="flex gap-2 pt-1">
@@ -311,7 +307,7 @@ function ResetPasswordModal({ customerId, onClose, onSuccess }) {
             {loading ? 'Saving…' : 'Reset Password'}
           </button>
           <button type="button" onClick={onClose}
-            className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             Cancel
           </button>
         </div>
@@ -370,13 +366,8 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
           <InputRow label="Street" name="streetName" value={form.streetName} onChange={onChange} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
-          <select
-            name="areaId"
-            value={form.areaId}
-            onChange={onChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area</label>
+          <select name="areaId" value={form.areaId} onChange={onChange} className={INPUT}>
             <option value="">Select area…</option>
             {areas.map((a) => (
               <option key={a.areaId} value={a.areaId}>{a.areaName}</option>
@@ -389,7 +380,7 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
             {loading ? 'Saving…' : 'Save Changes'}
           </button>
           <button type="button" onClick={onClose}
-            className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             Cancel
           </button>
         </div>
@@ -422,10 +413,10 @@ function CloseAccountModal({ customer, onClose, onSuccess }) {
       <ModalError msg={error} />
       {hasOutstanding ? (
         <>
-          <p className="text-sm text-gray-700 mb-1">
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
             This customer has an outstanding <span className="font-semibold">{customer.subscriptionStatus === 'GRACE' ? 'Grace Period' : 'Payment Pending'}</span> subscription.
           </p>
-          <p className="text-sm text-gray-700 mb-5">Was the payment collected before closing the account?</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-5">Was the payment collected before closing the account?</p>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => handleClose(true)} disabled={loading}
               className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50">
@@ -436,21 +427,21 @@ function CloseAccountModal({ customer, onClose, onSuccess }) {
               {loading ? 'Closing…' : 'No, close without payment'}
             </button>
             <button type="button" onClick={onClose} disabled={loading}
-              className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+              className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
               Cancel
             </button>
           </div>
         </>
       ) : (
         <>
-          <p className="text-sm text-gray-700 mb-5">Close this account? This cannot be undone.</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-5">Close this account? This cannot be undone.</p>
           <div className="flex gap-2">
             <button onClick={() => handleClose(false)} disabled={loading}
               className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
               {loading ? 'Closing…' : 'Close Account'}
             </button>
             <button type="button" onClick={onClose} disabled={loading}
-              className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+              className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
               Cancel
             </button>
           </div>
@@ -480,14 +471,14 @@ function DeleteCustomerModal({ customerId, onClose, onSuccess }) {
   return (
     <Modal title="Delete Customer" onClose={onClose}>
       <ModalError msg={error} />
-      <p className="text-sm text-gray-700 mb-5">Permanently delete this customer? This cannot be undone.</p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mb-5">Permanently delete this customer? This cannot be undone.</p>
       <div className="flex gap-2">
         <button onClick={handleConfirm} disabled={loading}
           className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
           {loading ? 'Deleting…' : 'Delete Customer'}
         </button>
         <button type="button" onClick={onClose}
-          className="text-sm text-gray-600 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+          className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
           Cancel
         </button>
       </div>
@@ -521,21 +512,20 @@ export default function CustomerDetail() {
   const onSuccess = (msg) => { closeModal(); setActionMsg(msg); reload(); setTimeout(() => setActionMsg(''), 4000); };
 
   const handleCloseAccount = () => setModal('closeAccount');
-
   const handleDelete = () => setModal('deleteCustomer');
 
   if (error) return (
     <AdminLayout>
-      <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm">{error}</div>
+      <div className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>
     </AdminLayout>
   );
 
   if (!customer) return (
     <AdminLayout>
       <div className="space-y-4 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-48" />
-        <div className="h-40 bg-gray-100 rounded-2xl" />
-        <div className="h-32 bg-gray-100 rounded-2xl" />
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48" />
+        <div className="h-40 bg-gray-100 dark:bg-gray-700 rounded-2xl" />
+        <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded-2xl" />
       </div>
     </AdminLayout>
   );
@@ -546,19 +536,19 @@ export default function CustomerDetail() {
   return (
     <AdminLayout>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-        <button onClick={() => navigate('/admin/customers')} className="hover:text-blue-700 transition">Customers</button>
+      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <button onClick={() => navigate('/admin/customers')} className="hover:text-blue-700 dark:hover:text-blue-400 transition">Customers</button>
         <span>/</span>
-        <span className="text-gray-800 font-medium">{fullName}</span>
+        <span className="text-gray-800 dark:text-gray-200 font-medium">{fullName}</span>
       </div>
 
       {actionMsg && (
-        <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2 mb-4">
+        <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-lg px-4 py-2 mb-4">
           {actionMsg}
         </div>
       )}
       {actionError && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 mb-4">
           {actionError}
         </div>
       )}
@@ -566,27 +556,27 @@ export default function CustomerDetail() {
       {/* Header */}
       <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{fullName}</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{fullName}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setModal('payment')}
             disabled={customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED'}
             title={customer.status === 'SUSPENDED' || customer.status === 'ACCOUNT_CLOSED' ? 'Re-enroll the customer before recording a payment' : undefined}
-            className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+            className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             Record Payment
           </button>
           <button
             onClick={() => setModal('edit')}
-            className="bg-white text-gray-700 border border-gray-300 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition"
+            className="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition"
           >
             Edit
           </button>
           {customer.status !== 'SUSPENDED' && customer.status !== 'ACCOUNT_CLOSED' && (
             <button
               onClick={handleCloseAccount}
-              className="bg-white text-red-600 border border-red-300 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition"
+              className="bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition"
             >
               Close Account
             </button>
@@ -603,8 +593,8 @@ export default function CustomerDetail() {
       </div>
 
       {/* Profile card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Customer Info</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
+        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Customer Info</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
           <Field label="Phone" value={customer.phone} />
           <Field label="Email" value={customer.email} />
@@ -614,20 +604,20 @@ export default function CustomerDetail() {
           <Field label="Address" value={address} />
           <Field label="Member Since" value={fmtDateTime(customer.accountCreatedAt)} />
           <div>
-            <p className="text-xs font-medium text-gray-400 mb-1">Status</p>
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">Status</p>
             <CustomerStatusBadge status={customer.status} />
           </div>
         </div>
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => setModal('resetPassword')}
-            className="text-xs text-gray-500 underline hover:text-gray-700 transition"
+            className="text-xs text-gray-500 dark:text-gray-400 underline hover:text-gray-700 dark:hover:text-gray-200 transition"
           >
             Reset Portal Password
           </button>
           <button
             onClick={handleDelete}
-            className="text-xs text-red-500 underline hover:text-red-700 transition"
+            className="text-xs text-red-500 dark:text-red-400 underline hover:text-red-700 dark:hover:text-red-300 transition"
           >
             Delete Customer
           </button>
@@ -635,8 +625,8 @@ export default function CustomerDetail() {
       </div>
 
       {/* Subscription card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Current Subscription</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
+        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Current Subscription</h3>
         {customer.currentSubscriptionStart ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
@@ -651,53 +641,53 @@ export default function CustomerDetail() {
               <Field label="Grace Deadline" value={fmtDate(customer.gracePeriodDeadline)} />
             )}
             <div>
-              <p className="text-xs text-gray-500 mb-1">Payment Status</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Payment Status</p>
               <StatusBadge status={customer.subscriptionStatus || customer.status} />
             </div>
             {customer.paymentPending && (
               <div className="sm:col-span-2 lg:col-span-3">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-700 font-medium">
+                <div className="bg-orange-50 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-sm text-orange-700 dark:text-orange-300 font-medium">
                   Payment pending for this period.
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No active subscription.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No active subscription.</p>
         )}
       </div>
 
       {/* Payment history */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Payment History</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Payment History</h3>
         </div>
         {payments.length === 0 ? (
-          <p className="text-sm text-gray-500 px-6 py-5">No payments recorded.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No payments recorded.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">For Month</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Method</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Recorded By</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Notes</th>
+                <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">For Month</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Method</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Recorded By</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                 {payments.map((p) => (
-                  <tr key={p.paymentId} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{fmtDate(p.forMonth)}</td>
-                    <td className="px-4 py-3 text-gray-800 font-semibold">{fmtCurrency(p.amount)}</td>
+                  <tr key={p.paymentId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{fmtDate(p.forMonth)}</td>
+                    <td className="px-4 py-3 text-gray-800 dark:text-gray-100 font-semibold">{fmtCurrency(p.amount)}</td>
                     <td className="px-4 py-3"><StatusBadge status={p.subscriptionStatus} /></td>
-                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{fmtDateTime(p.paymentDate)}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{p.paymentMethod || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{p.recordedByName || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell text-xs">{p.notes || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{fmtDateTime(p.paymentDate)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{p.paymentMethod || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{p.recordedByName || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 hidden lg:table-cell text-xs">{p.notes || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -708,47 +698,22 @@ export default function CustomerDetail() {
 
       {/* Modals */}
       {modal === 'payment' && (
-        <RecordPaymentModal
-          customer={customer}
-          onClose={closeModal}
-          onSuccess={() => onSuccess('Payment recorded.')}
-        />
+        <RecordPaymentModal customer={customer} onClose={closeModal} onSuccess={() => onSuccess('Payment recorded.')} />
       )}
       {modal === 'edit' && (
-        <EditCustomerModal
-          customer={customer}
-          areas={areas}
-          onClose={closeModal}
-          onSuccess={() => onSuccess('Customer updated.')}
-        />
+        <EditCustomerModal customer={customer} areas={areas} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
       )}
       {modal === 'reenroll' && (
-        <ReEnrollModal
-          customerId={id}
-          onClose={closeModal}
-          onSuccess={() => onSuccess('Customer re-enrolled.')}
-        />
+        <ReEnrollModal customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Customer re-enrolled.')} />
       )}
       {modal === 'resetPassword' && (
-        <ResetPasswordModal
-          customerId={id}
-          onClose={closeModal}
-          onSuccess={() => onSuccess('Password reset.')}
-        />
+        <ResetPasswordModal customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Password reset.')} />
       )}
       {modal === 'closeAccount' && (
-        <CloseAccountModal
-          customer={customer}
-          onClose={closeModal}
-          onSuccess={() => onSuccess('Account closed.')}
-        />
+        <CloseAccountModal customer={customer} onClose={closeModal} onSuccess={() => onSuccess('Account closed.')} />
       )}
       {modal === 'deleteCustomer' && (
-        <DeleteCustomerModal
-          customerId={id}
-          onClose={closeModal}
-          onSuccess={() => navigate('/admin/customers')}
-        />
+        <DeleteCustomerModal customerId={id} onClose={closeModal} onSuccess={() => navigate('/admin/customers')} />
       )}
     </AdminLayout>
   );

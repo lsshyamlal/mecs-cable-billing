@@ -55,10 +55,12 @@ export default function Customers() {
       })
     : [];
 
+  const inputCls = 'border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-400';
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Customers</h1>
         <button
           onClick={() => navigate('/admin/customers/new')}
           className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition"
@@ -74,7 +76,7 @@ export default function Customers() {
           placeholder="Search name, phone, STB ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
+          className={`${inputCls} w-full sm:w-56`}
         />
         <select
           value={futureStatusFilter ? `f:${futureStatusFilter}` : statusFilter ? `s:${statusFilter}` : ''}
@@ -87,7 +89,7 @@ export default function Customers() {
             else if (val.startsWith('f:')) next.set('futureStatus', val.slice(2));
             setSearchParams(next);
           }}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls}
         >
           <option value="">All Status</option>
           <optgroup label="Customer Status">
@@ -108,7 +110,7 @@ export default function Customers() {
         <select
           value={areaFilter}
           onChange={(e) => setFilter('areaId', e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={inputCls}
         >
           <option value="">All Areas</option>
           {areas.map((a) => (
@@ -118,7 +120,7 @@ export default function Customers() {
         {(statusFilter || futureStatusFilter || areaFilter || search) && (
           <button
             onClick={() => { setSearch(''); setSearchParams({}); }}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
           >
             Clear filters
           </button>
@@ -126,58 +128,58 @@ export default function Customers() {
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">{error}</div>
+        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 mb-4">{error}</div>
       )}
 
       {customers === null ? (
         <div className="space-y-2 animate-pulse">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-12 bg-gray-100 rounded-lg" />
+            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded-lg" />
           ))}
         </div>
       ) : displayed.length === 0 ? (
-        <div className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-100 p-8 text-center">
+        <div className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-8 text-center">
           No customers found.
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">STB ID</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Area</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Phone</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Grace Deadline</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Rate</th>
+                <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">STB ID</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Area</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Phone</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Grace Deadline</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Rate</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                 {displayed.map((c) => (
                   <tr
                     key={c.customerId}
                     onClick={() => navigate(`/admin/customers/${c.customerId}`)}
-                    className="hover:bg-blue-50 cursor-pointer transition"
+                    className="hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-800">
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
                       {[c.firstName, c.lastName].filter(Boolean).join(' ')}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{c.stbId || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{c.areaName || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.phone}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">{c.stbId || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{c.areaName || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{c.phone}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.subscriptionStatus || c.status} /></td>
-                    <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtDate(c.currentPaymentDueDate)}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden xl:table-cell">{fmtDate(c.gracePeriodDeadline)}</td>
-                    <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{fmtCurrency(c.currentPaymentAmount)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{fmtDate(c.currentPaymentDueDate)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden xl:table-cell">{fmtDate(c.gracePeriodDeadline)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{fmtCurrency(c.currentPaymentAmount)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-400">
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
             {displayed.length} customer{displayed.length !== 1 ? 's' : ''}
             {customers.length !== displayed.length && ` (filtered from ${customers.length})`}
           </div>
