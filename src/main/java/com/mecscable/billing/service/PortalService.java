@@ -75,7 +75,6 @@ public class PortalService {
                 c.getCurrentPaymentAmount(),
                 subscriptionStatus,
                 c.getCurrentPaymentDueDate(),
-                c.isPaymentPending(),
                 gracePeriodDeadline
         );
     }

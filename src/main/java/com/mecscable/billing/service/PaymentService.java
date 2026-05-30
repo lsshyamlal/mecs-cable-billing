@@ -113,7 +113,6 @@ public class PaymentService {
         // currentSubscriptionStart/End and currentPaymentDueDate all stay on the paid month
         // so the UI shows consistent PAID-period info. The scheduler advances all three to
         // the next subscription when it transitions ACTIVE → GRACE.
-        customer.setPaymentPending(false);
         customerRepository.save(customer);
 
         auditService.log(adminId, "RECORD_PAYMENT", "Payment", payment.getPaymentId(),

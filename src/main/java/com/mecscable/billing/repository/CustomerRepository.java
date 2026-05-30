@@ -16,13 +16,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     List<Customer> findByAreaAndStatus(Area area, CustomerStatus status);
 
-    List<Customer> findByPaymentPendingTrue();
-
     Optional<Customer> findByStbIdAndStatus(String stbId, CustomerStatus status);
 
     long countByStatus(CustomerStatus status);
-
-    long countByPaymentPendingTrue();
 
     Optional<Customer> findByPhone(String phone);
 

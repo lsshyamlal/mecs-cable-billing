@@ -194,7 +194,7 @@ public class ReportService {
     }
 
     private String[] customerCsvHeaders() {
-        return new String[]{"Customer ID", "First Name", "Last Name", "Area", "Door No", "Street", "Phone", "Email", "STB ID", "Status", "Payment Pending", "Current Amount (₹)", "Last Payment Date", "Subscription Start", "Subscription End"};
+        return new String[]{"Customer ID", "First Name", "Last Name", "Area", "Door No", "Street", "Phone", "Email", "STB ID", "Status", "Current Amount (₹)", "Last Payment Date", "Subscription Start", "Subscription End"};
     }
 
     private String[] customerCsvRow(CustomerResponse r) {
@@ -209,7 +209,6 @@ public class ReportService {
                 r.email() != null ? r.email() : "",
                 r.stbId() != null ? r.stbId() : "",
                 r.status(),
-                String.valueOf(r.paymentPending()),
                 str(r.currentPaymentAmount()),
                 str(r.lastPaymentDate()),
                 str(r.currentSubscriptionStart()),

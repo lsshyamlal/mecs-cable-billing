@@ -166,7 +166,6 @@ public class CustomerService {
             throw new IllegalArgumentException("Customer account is already closed");
         }
         customer.setStatus(paymentCollected ? CustomerStatus.ACCOUNT_CLOSED : CustomerStatus.SUSPENDED);
-        customer.setPaymentPending(false);
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         customerRepository.save(customer);
 
@@ -199,7 +198,6 @@ public class CustomerService {
         }
 
         customer.setStatus(CustomerStatus.ACTIVE);
-        customer.setPaymentPending(true);
         customer.setSuspendedAt(null);
         customerRepository.save(customer);
 
@@ -311,7 +309,6 @@ public class CustomerService {
                 c.getStbId(),
                 c.getStatus().name(),
                 subscriptionStatus,
-                c.isPaymentPending(),
                 c.getLastPaymentAmount(),
                 c.getLastPaymentDate(),
                 c.getCurrentPaymentAmount(),

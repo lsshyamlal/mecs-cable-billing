@@ -76,9 +76,6 @@ public class Customer {
     @Column(name = "current_payment_due_date")
     private LocalDate currentPaymentDueDate;
 
-    @Column(name = "is_payment_pending", nullable = false)
-    private boolean paymentPending = false;
-
     @Column(name = "current_subscription_start")
     private LocalDate currentSubscriptionStart;
 

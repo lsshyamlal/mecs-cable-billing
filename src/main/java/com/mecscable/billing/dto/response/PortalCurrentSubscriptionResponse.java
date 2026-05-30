@@ -9,6 +9,5 @@ public record PortalCurrentSubscriptionResponse(
         BigDecimal monthlyRate,
         String status,
         LocalDate dueDate,
-        boolean paymentPending,
         LocalDate gracePeriodDeadline
 ) {}

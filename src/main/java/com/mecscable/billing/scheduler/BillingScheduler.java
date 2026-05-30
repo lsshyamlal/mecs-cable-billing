@@ -93,8 +93,6 @@ public class BillingScheduler {
             subscriptionRepository.save(sub);
 
             Customer customer = sub.getCustomer();
-            customer.setPaymentPending(true);
-            customerRepository.save(customer);
 
             auditService.logSystem("PAYMENT_PENDING", "Subscription",
                     sub.getSubscriptionId(), null);
