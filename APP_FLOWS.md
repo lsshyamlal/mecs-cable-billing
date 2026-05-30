@@ -3,19 +3,53 @@
 ## Subscription Status Lifecycle
 
 ```
-ACTIVE ──[scheduler: start date reached]──► GRACE
-GRACE  ──[scheduler: past grace period day]──► PAYMENT_PENDING
-PAYMENT_PENDING ──[admin records payment]──► PAID
-PAID ──[payment recorded: next month's subscription pre-created immediately]──► ACTIVE
+Creation:
+  startDate ≤ today  ──────────────────────────────────────► GRACE
+  startDate > today  ──────────────────────────────────────► SCHEDULED
+
+Normal billing cycle:
+  SCHEDULED ──[scheduler: startDate ≤ today]──► GRACE
+  GRACE     ──[scheduler: today past gracePeriodDay]──► PAYMENT_PENDING
+  PAYMENT_PENDING ──[admin records payment]──► PAID
+                         │
+                         └──[auto-creates next subscription]──► SCHEDULED (new month)
+
+Re-enrollment:
+  (SUSPENDED | ACCOUNT_CLOSED customer) ──[admin re-enrolls]──► PAYMENT_PENDING
+
+Terminal (via Close Account):
+  GRACE | PAYMENT_PENDING ──[account closed, payment NOT collected]──► SUSPENDED
+  GRACE | PAYMENT_PENDING ──[account closed, payment collected]──► PAID
+  SCHEDULED (future)      ──[account closed]──► CANCELLED
 ```
+
+Full set of subscription statuses: `SCHEDULED`, `GRACE`, `PAYMENT_PENDING`, `PAID`, `SUSPENDED`, `CANCELLED`
+(`ACTIVE` was renamed to `SCHEDULED` in migration V12 — there is no `ACTIVE` subscription status.)
 
 ## Customer Account Lifecycle
 
 ```
-ACTIVE ──[admin closes account]──► SUSPENDED
-SUSPENDED ──[admin re-enrolls]──► ACTIVE
-SUSPENDED ──[2 years elapsed]──► ACCOUNT_CLOSED (portal read-only expires)
+ACTIVE ──[admin closes account, payment NOT collected]──► SUSPENDED
+ACTIVE ──[admin closes account, payment collected]──────► ACCOUNT_CLOSED
+
+SUSPENDED      ──[admin re-enrolls]──► ACTIVE
+ACCOUNT_CLOSED ──[admin re-enrolls]──► ACTIVE
+
+Portal read-only access (login allowed):
+  SUSPENDED | ACCOUNT_CLOSED  ──[within 2 years of suspendedAt]──► login permitted (read-only)
+  SUSPENDED | ACCOUNT_CLOSED  ──[2+ years after suspendedAt]─────► login rejected
 ```
+
+Deletion:
+  SUSPENDED | ACCOUNT_CLOSED ──[admin deletes]──► permanently removed
+  ACTIVE ──[admin deletes]──► rejected ("close the account first")
+```
+
+Notes:
+- `ACCOUNT_CLOSED` is set only by `closeAccount(paymentCollected=true)` — there is no automatic status change after 2 years.
+- The 2-year window governs portal **login**, not customer status; both `SUSPENDED` and `ACCOUNT_CLOSED` share the same rule.
+- Deletion is a hard delete: payments and subscriptions are removed first, then the customer row. The audit log entry survives (keyed by entity id, not a FK).
+- Customer statuses: `ACTIVE`, `SUSPENDED`, `ACCOUNT_CLOSED`
 
 ---
 
