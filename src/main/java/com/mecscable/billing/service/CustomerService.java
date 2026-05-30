@@ -4,6 +4,7 @@ import com.mecscable.billing.dto.request.CreateCustomerRequest;
 import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.UpdateCustomerRequest;
 import com.mecscable.billing.dto.response.CustomerResponse;
+import com.mecscable.billing.dto.response.CustomerStatusHistoryItem;
 import com.mecscable.billing.entity.*;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.*;
@@ -28,6 +29,7 @@ public class CustomerService {
     private final AdminRepository adminRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
+    private final CustomerStatusHistoryRepository statusHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
@@ -36,6 +38,7 @@ public class CustomerService {
                            AdminRepository adminRepository,
                            SubscriptionRepository subscriptionRepository,
                            PaymentRepository paymentRepository,
+                           CustomerStatusHistoryRepository statusHistoryRepository,
                            PasswordEncoder passwordEncoder,
                            AuditService auditService) {
         this.customerRepository = customerRepository;
@@ -43,6 +46,7 @@ public class CustomerService {
         this.adminRepository = adminRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
     }
@@ -120,6 +124,7 @@ public class CustomerService {
 
         createSubscription(customer, null, request.subscriptionStartDate(), adminId);
 
+        saveStatusEvent(customer, null, CustomerStatus.ACTIVE, adminId, null);
         auditService.log(adminId, "CREATE_CUSTOMER", "Customer", customer.getCustomerId(), null);
         return toResponse(customerRepository.findById(customer.getCustomerId()).orElseThrow());
     }
@@ -160,7 +165,7 @@ public class CustomerService {
     }
 
     @Transactional
-    public void closeAccount(Long customerId, boolean paymentCollected, Long adminId) {
+    public void closeAccount(Long customerId, boolean paymentCollected, String notes, Long adminId) {
         Customer customer = findCustomer(customerId);
         if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED || customer.getStatus() == CustomerStatus.SUSPENDED) {
             throw new IllegalArgumentException("Customer account is already closed or suspended");
@@ -187,6 +192,9 @@ public class CustomerService {
             subscriptionRepository.save(sub);
         }
 
+        saveStatusEvent(customer, CustomerStatus.ACTIVE,
+                paymentCollected ? CustomerStatus.ACCOUNT_CLOSED : CustomerStatus.SUSPENDED,
+                adminId, notes);
         auditService.log(adminId, "CLOSE_ACCOUNT", "Customer", customerId, null);
     }
 
@@ -197,6 +205,7 @@ public class CustomerService {
             throw new IllegalArgumentException("Customer account must be suspended or closed to re-enroll");
         }
 
+        CustomerStatus previousStatus = customer.getStatus();
         customer.setStatus(CustomerStatus.ACTIVE);
         customer.setSuspendedAt(null);
         customerRepository.save(customer);
@@ -205,6 +214,7 @@ public class CustomerService {
         sub.setStatus(SubscriptionStatus.PAYMENT_PENDING);
         subscriptionRepository.save(sub);
 
+        saveStatusEvent(customer, previousStatus, CustomerStatus.ACTIVE, adminId, null);
         auditService.log(adminId, "REENROLL_CUSTOMER", "Customer", customerId, null);
         return toResponse(customerRepository.findById(customerId).orElseThrow());
     }
@@ -227,6 +237,38 @@ public class CustomerService {
         subscriptionRepository.deleteAll(subscriptionRepository.findByCustomerOrderByStartDateDesc(customer));
         customerRepository.delete(customer);
         auditService.log(adminId, "DELETE_CUSTOMER", "Customer", customerId, null);
+    }
+
+    public List<CustomerStatusHistoryItem> getStatusHistory(Long customerId) {
+        Customer customer = findCustomer(customerId);
+        return statusHistoryRepository.findByCustomerOrderByChangedAtDesc(customer)
+                .stream()
+                .map(h -> new CustomerStatusHistoryItem(
+                        h.getHistoryId(),
+                        h.getFromStatus() != null ? h.getFromStatus().name() : null,
+                        h.getToStatus().name(),
+                        h.getChangedAt(),
+                        h.getChangedBy() != null ? h.getChangedBy().getAdminId() : null,
+                        h.getChangedBy() != null
+                                ? (h.getChangedBy().getFirstName() + (h.getChangedBy().getLastName() != null
+                                        ? " " + h.getChangedBy().getLastName() : "")).trim()
+                                : null,
+                        h.getNotes()
+                ))
+                .toList();
+    }
+
+    private void saveStatusEvent(Customer customer, CustomerStatus fromStatus,
+                                 CustomerStatus toStatus, Long adminId, String notes) {
+        CustomerStatusHistory event = new CustomerStatusHistory();
+        event.setCustomer(customer);
+        event.setFromStatus(fromStatus);
+        event.setToStatus(toStatus);
+        event.setNotes(notes);
+        if (adminId != null) {
+            adminRepository.findById(adminId).ifPresent(event::setChangedBy);
+        }
+        statusHistoryRepository.save(event);
     }
 
     private Subscription createSubscription(Customer customer, java.math.BigDecimal monthlyRate,

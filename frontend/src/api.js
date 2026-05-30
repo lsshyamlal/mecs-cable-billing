@@ -91,6 +91,7 @@ export const closeAccount = (id, data) => api.put(`/customers/${id}/close-accoun
 export const reEnrollCustomer = (id, data) => api.put(`/customers/${id}/reenroll`, data);
 export const resetCustomerPassword = (id, data) => api.put(`/customers/${id}/reset-password`, data);
 export const deleteCustomer = (id) => api.delete(`/customers/${id}`);
+export const getCustomerStatusHistory = (id) => api.get(`/customers/${id}/status-history`);
 
 // ── Payments ─────────────────────────────────────────────────
 export const recordPayment = (customerId, data) => api.post(`/payments/${customerId}`, data);

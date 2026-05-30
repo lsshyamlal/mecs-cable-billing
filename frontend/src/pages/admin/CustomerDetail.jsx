@@ -5,6 +5,7 @@ import {
   getCustomer, getAreas, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer, getSubscriptionPacks,
+  getCustomerStatusHistory,
 } from '../../api';
 import { StatusBadge, CustomerStatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
@@ -389,17 +390,31 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
   );
 }
 
+const AUTO_NOTES = { true: 'Payment collected', false: 'Closed without payment' };
+
 // ── Close Account Confirm Modal ───────────────────────────────
 function CloseAccountModal({ customer, onClose, onSuccess }) {
+  const hasOutstanding = customer.subscriptionStatus === 'GRACE' || customer.subscriptionStatus === 'PAYMENT_PENDING';
+
+  const [paymentCollected, setPaymentCollected] = useState(hasOutstanding ? null : false);
+  const [notes, setNotes] = useState(hasOutstanding ? '' : AUTO_NOTES[false]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const hasOutstanding = customer.subscriptionStatus === 'GRACE' || customer.subscriptionStatus === 'PAYMENT_PENDING';
+  const onPaymentChoice = (collected) => {
+    const otherAuto = AUTO_NOTES[!collected];
+    if (notes === '' || notes === otherAuto) setNotes(AUTO_NOTES[collected]);
+    setPaymentCollected(collected);
+  };
 
-  const handleClose = async (paymentCollected) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true); setError('');
     try {
-      await closeAccount(customer.customerId, { paymentCollected });
+      await closeAccount(customer.customerId, {
+        paymentCollected: paymentCollected ?? false,
+        notes: notes.trim() || null,
+      });
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to close account.');
@@ -410,43 +425,60 @@ function CloseAccountModal({ customer, onClose, onSuccess }) {
 
   return (
     <Modal title="Close Account" onClose={onClose}>
-      <ModalError msg={error} />
-      {hasOutstanding ? (
-        <>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-            This customer has an outstanding <span className="font-semibold">{customer.subscriptionStatus === 'GRACE' ? 'Grace Period' : 'Payment Pending'}</span> subscription.
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ModalError msg={error} />
+
+        {hasOutstanding && (
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This customer has an outstanding{' '}
+            <span className="font-semibold">
+              {customer.subscriptionStatus === 'GRACE' ? 'Grace Period' : 'Payment Pending'}
+            </span>{' '}
+            subscription.
           </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-5">Was the payment collected before closing the account?</p>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => handleClose(true)} disabled={loading}
-              className="bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50">
-              {loading ? 'Closing…' : 'Yes, payment collected'}
-            </button>
-            <button onClick={() => handleClose(false)} disabled={loading}
-              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-              {loading ? 'Closing…' : 'No, close without payment'}
-            </button>
-            <button type="button" onClick={onClose} disabled={loading}
-              className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-              Cancel
-            </button>
+        )}
+
+        <div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Was payment collected before closing?
+          </p>
+          <div className="flex gap-3">
+            <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === true ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}>
+              <input type="radio" name="paymentCollected" checked={paymentCollected === true}
+                onChange={() => onPaymentChoice(true)} className="sr-only" />
+              Yes
+            </label>
+            <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === false ? 'bg-red-600 border-red-600 text-white' : 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'}`}>
+              <input type="radio" name="paymentCollected" checked={paymentCollected === false}
+                onChange={() => onPaymentChoice(false)} className="sr-only" />
+              No
+            </label>
           </div>
-        </>
-      ) : (
-        <>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-5">Close this account? This cannot be undone.</p>
-          <div className="flex gap-2">
-            <button onClick={() => handleClose(false)} disabled={loading}
-              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-              {loading ? 'Closing…' : 'Close Account'}
-            </button>
-            <button type="button" onClick={onClose} disabled={loading}
-              className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-              Cancel
-            </button>
-          </div>
-        </>
-      )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Add notes…"
+            className={`${INPUT} resize-none`}
+          />
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button type="submit"
+            disabled={loading || (hasOutstanding && paymentCollected === null)}
+            className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+            {loading ? 'Closing…' : 'Close Account'}
+          </button>
+          <button type="button" onClick={onClose} disabled={loading}
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            Cancel
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
@@ -492,6 +524,7 @@ export default function CustomerDetail() {
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [statusHistory, setStatusHistory] = useState([]);
   const [areas, setAreas] = useState([]);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
@@ -501,6 +534,7 @@ export default function CustomerDetail() {
   const reload = () => {
     getCustomer(id).then((r) => setCustomer(r.data)).catch(() => setError('Failed to load customer.'));
     listPaymentsByCustomer(id).then((r) => setPayments(r.data)).catch(() => {});
+    getCustomerStatusHistory(id).then((r) => setStatusHistory(r.data)).catch(() => {});
   };
 
   useEffect(() => {
@@ -688,6 +722,51 @@ export default function CustomerDetail() {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{p.paymentMethod || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{p.recordedByName || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-500 hidden lg:table-cell text-xs">{p.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Account history */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mt-4">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Account History</h3>
+        </div>
+        {statusHistory.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No history recorded.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Event</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Done By</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                {statusHistory.map((h) => (
+                  <tr key={h.historyId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {h.fromStatus ? (
+                          <>
+                            <CustomerStatusBadge status={h.fromStatus} />
+                            <span className="text-gray-400 dark:text-gray-500 text-xs">→</span>
+                            <CustomerStatusBadge status={h.toStatus} />
+                          </>
+                        ) : (
+                          <CustomerStatusBadge status={h.toStatus} />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">{fmtDateTime(h.changedAt)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{h.changedByName || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 hidden md:table-cell text-xs">{h.notes || '—'}</td>
                   </tr>
                 ))}
               </tbody>

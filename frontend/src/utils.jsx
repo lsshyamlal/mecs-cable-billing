@@ -23,7 +23,7 @@ export function CustomerStatusBadge({ status }) {
   const colorClass = CUSTOMER_STATUS_COLORS[status] || 'bg-gray-700 text-white';
   const label = STATUS_LABELS[status] || status?.replace(/_/g, ' ');
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${colorClass}`}>
+    <span className={`inline-flex items-center justify-center w-28 px-2.5 py-0.5 rounded-md text-xs font-semibold ${colorClass}`}>
       {label}
     </span>
   );

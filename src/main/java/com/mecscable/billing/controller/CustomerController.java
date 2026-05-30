@@ -6,6 +6,7 @@ import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.ResetPasswordRequest;
 import com.mecscable.billing.dto.request.UpdateCustomerRequest;
 import com.mecscable.billing.dto.response.CustomerResponse;
+import com.mecscable.billing.dto.response.CustomerStatusHistoryItem;
 import com.mecscable.billing.security.UserPrincipal;
 import com.mecscable.billing.service.CustomerService;
 import jakarta.validation.Valid;
@@ -39,6 +40,11 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
+    @GetMapping("/{id}/status-history")
+    public ResponseEntity<List<CustomerStatusHistoryItem>> getStatusHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(customerService.getStatusHistory(id));
+    }
+
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(
             @Valid @RequestBody CreateCustomerRequest request,
@@ -60,7 +66,7 @@ public class CustomerController {
             @PathVariable Long id,
             @RequestBody CloseAccountRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        customerService.closeAccount(id, request.paymentCollected(), principal.getUserId());
+        customerService.closeAccount(id, request.paymentCollected(), request.notes(), principal.getUserId());
         return ResponseEntity.ok().build();
     }
 
