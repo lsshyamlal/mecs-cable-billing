@@ -52,7 +52,7 @@ public class BillingScheduler {
     private int moveActiveToGrace(LocalDate today) {
         // Payment is due on the subscription start date; catches late-day enrollments via <=
         List<Subscription> due = subscriptionRepository
-                .findByStatusAndStartDateLessThanEqual(SubscriptionStatus.ACTIVE, today);
+                .findByStatusAndStartDateLessThanEqual(SubscriptionStatus.SCHEDULED, today);
 
         for (Subscription sub : due) {
             if (sub.getCustomer().getStatus() == CustomerStatus.ACCOUNT_CLOSED) continue;

@@ -176,7 +176,7 @@ public class CustomerService {
         // Resolve any open subscriptions for the current period (GRACE, PAYMENT_PENDING, or a
         // current-month ACTIVE that the scheduler hasn't transitioned yet).
         List<Subscription> currentSubs = subscriptionRepository.findByCustomerAndStatusInOrderByStartDateDesc(
-                customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING, SubscriptionStatus.ACTIVE));
+                customer, List.of(SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING, SubscriptionStatus.SCHEDULED));
         for (Subscription sub : currentSubs) {
             if (sub.getStartDate().isAfter(today)) {
                 // Genuinely future-dated pre-created subscription — cancel it.
@@ -243,7 +243,7 @@ public class CustomerService {
         // enters GRACE immediately. ACTIVE is reserved for future-dated subscriptions that
         // the scheduler hasn't yet brought live.
         SubscriptionStatus initialStatus = start.isAfter(LocalDate.now(IST))
-                ? SubscriptionStatus.ACTIVE : SubscriptionStatus.GRACE;
+                ? SubscriptionStatus.SCHEDULED : SubscriptionStatus.GRACE;
 
         Subscription sub = new Subscription();
         sub.setCustomer(customer);

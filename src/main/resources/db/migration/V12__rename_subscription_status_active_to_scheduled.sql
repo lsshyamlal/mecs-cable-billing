@@ -1,0 +1,1 @@
+ALTER TYPE subscription_status RENAME VALUE 'ACTIVE' TO 'SCHEDULED';

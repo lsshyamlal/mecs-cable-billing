@@ -56,7 +56,7 @@ public class PaymentService {
         Subscription targetSub = subscriptionRepository
                 .findByCustomerAndStartDateBetween(customer, firstOfMonth, lastOfMonth)
                 .stream()
-                .filter(s -> List.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING)
+                .filter(s -> List.of(SubscriptionStatus.SCHEDULED, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING)
                         .contains(s.getStatus()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -101,7 +101,7 @@ public class PaymentService {
             nextSub.setMonthlyRate(request.amount());
             nextSub.setStartDate(nextStart);
             nextSub.setEndDate(nextEnd);
-            nextSub.setStatus(SubscriptionStatus.ACTIVE);
+            nextSub.setStatus(SubscriptionStatus.SCHEDULED);
             nextSub.setEnrolledBy(admin);
             nextSub.setPack(pack);
             subscriptionRepository.save(nextSub);
