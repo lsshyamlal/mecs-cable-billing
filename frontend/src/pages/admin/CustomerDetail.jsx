@@ -164,7 +164,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
                 setForm((f) => ({ ...f, forMonth: `${yr}-${e.target.value}-01` }));
               }}
               required
-              className={`flex-1 ${INPUT}`}
+              className={INPUT.replace('w-full', 'flex-1')}
             >
               <option value="">Month</option>
               {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
@@ -180,7 +180,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
                 setForm((f) => ({ ...f, forMonth: `${e.target.value}-${mo}-01` }));
               }}
               required
-              className={`w-28 ${INPUT}`}
+              className={INPUT.replace('w-full', 'w-28')}
             >
               <option value="">Year</option>
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((yr) => (
