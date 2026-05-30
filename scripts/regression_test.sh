@@ -159,7 +159,7 @@ check "Payment in GET /payments/:customerId" "$PAY1_ID" "$PAY_IN_CUST_LIST"
 PAY_IN_ALL=$(GET "/api/payments" | jq -r ".[] | select(.paymentId == $PAY1_ID) | .paymentId")
 check "Payment in GET /payments" "$PAY1_ID" "$PAY_IN_ALL"
 
-PAY1_DATE=$(echo "$PAY1" | jq -r '.paymentDate')
+PAY1_DATE=$(echo "$PAY1" | jq -r '.paymentDate | .[0:10]')
 PAY_IN_TODAY=$(GET "/api/payments?from=$PAY1_DATE&to=$PAY1_DATE" | jq -r ".[] | select(.paymentId == $PAY1_ID) | .paymentId")
 check "Payment in date-range filter" "$PAY1_ID" "$PAY_IN_TODAY"
 

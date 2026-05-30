@@ -81,7 +81,7 @@ public class PaymentService {
         payment.setRecordedBy(admin);
         payment.setNotes(request.notes());
         payment.setPack(pack);
-        payment.setManualOverride(request.manualOverride());
+        payment.setManualOverride(Boolean.TRUE.equals(request.manualOverride()));
         payment = paymentRepository.save(payment);
 
         targetSub.setStatus(SubscriptionStatus.PAID);

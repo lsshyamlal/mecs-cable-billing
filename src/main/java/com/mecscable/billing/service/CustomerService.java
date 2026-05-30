@@ -52,7 +52,7 @@ public class CustomerService {
         // fetch by area/all then filter on the computed subscriptionStatus in the response.
         boolean isSubscriptionStatus = status != null &&
                 (status.equals("GRACE") || status.equals("PAYMENT_PENDING") || status.equals("PAID")
-                        || status.equals("SUSPENDED") || status.equals("CANCELLED"));
+                        || status.equals("CANCELLED"));
 
         List<Customer> customers;
         if (isSubscriptionStatus || futureStatus != null) {
@@ -162,8 +162,8 @@ public class CustomerService {
     @Transactional
     public void closeAccount(Long customerId, boolean paymentCollected, Long adminId) {
         Customer customer = findCustomer(customerId);
-        if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED) {
-            throw new IllegalArgumentException("Customer account is already closed");
+        if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED || customer.getStatus() == CustomerStatus.SUSPENDED) {
+            throw new IllegalArgumentException("Customer account is already closed or suspended");
         }
         customer.setStatus(paymentCollected ? CustomerStatus.ACCOUNT_CLOSED : CustomerStatus.SUSPENDED);
         customer.setSuspendedAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
@@ -277,7 +277,9 @@ public class CustomerService {
         String currentPackName = null;
         if (c.getCurrentSubscriptionStart() != null) {
             var currentSub = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart());
-            subscriptionStatus = currentSub.map(s -> s.getStatus().name()).orElse(null);
+            subscriptionStatus = c.getStatus() == CustomerStatus.SUSPENDED
+                    ? "SUSPENDED"
+                    : currentSub.map(s -> s.getStatus().name()).orElse(null);
             currentPackId = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackId() : null).orElse(null);
             currentPackName = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackName() : null).orElse(null);
             if (c.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {

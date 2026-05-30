@@ -65,8 +65,13 @@ export default function Reports() {
       if (pArea) params.areaId = pArea;
       const r = await getPaymentReport(params);
       setPRows(r.data);
-    } catch {
-      setPError('Failed to load payment report.');
+    } catch (err) {
+      const status = err.response?.status;
+      if (status >= 400 && status < 500) {
+        setPError('No data available for the selected filters.');
+      } else {
+        setPError('Failed to load payment report. Please try again.');
+      }
     } finally {
       setPLoading(false);
     }
@@ -81,8 +86,13 @@ export default function Reports() {
       if (cArea) params.areaId = cArea;
       const r = await getCustomerReport(params);
       setCRows(r.data);
-    } catch {
-      setCError('Failed to load customer report.');
+    } catch (err) {
+      const status = err.response?.status;
+      if (status >= 400 && status < 500) {
+        setCError('No data available for the selected filters.');
+      } else {
+        setCError('Failed to load customer report. Please try again.');
+      }
     } finally {
       setCLoading(false);
     }
@@ -248,7 +258,7 @@ export default function Reports() {
                 </SectionHeader>
               </div>
               {cRows.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No customers found.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No customers found for the selected filters.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

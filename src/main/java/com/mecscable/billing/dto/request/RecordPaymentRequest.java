@@ -17,5 +17,5 @@ public record RecordPaymentRequest(
         String paymentMethod,
         String notes,
         Long packId,
-        boolean manualOverride
+        Boolean manualOverride
 ) {}
