@@ -3,7 +3,7 @@
 # Requires: curl, jq, app running on localhost:8080
 # Usage:    ./scripts/regression_test.sh
 
-BASE_URL="http://localhost:8080"
+BASE_URL="${MECS_BASE_URL:-http://localhost:9090}"
 COOKIE_JAR="/tmp/mecs_regression_cookies.txt"
 
 GREEN='\033[0;32m'
@@ -47,12 +47,10 @@ section() { echo -e "\n${YELLOW}${BOLD}▶ $1${NC}"; }
 GET()              { curl -s -b "$COOKIE_JAR" "$BASE_URL$1"; }
 POST()             { curl -s -b "$COOKIE_JAR" -c "$COOKIE_JAR" -X POST  "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
 PUT()              { curl -s -b "$COOKIE_JAR" -X PUT   "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
-PUT_NOBODY()       { curl -s -b "$COOKIE_JAR" -X PUT   "$BASE_URL$1"; }
-DELETE_REQ()       { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X DELETE "$BASE_URL$1"; }
-STATUS_GET()       { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}"            "$BASE_URL$1"; }
-STATUS_POST()      { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X POST    "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
-STATUS_PUT()       { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X PUT     "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
-STATUS_PUT_NOBODY(){ curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X PUT     "$BASE_URL$1"; }
+DELETE_REQ()  { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X DELETE "$BASE_URL$1"; }
+STATUS_GET()  { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}"            "$BASE_URL$1"; }
+STATUS_POST() { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X POST    "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
+STATUS_PUT()  { curl -s -b "$COOKIE_JAR" -o /dev/null -w "%{http_code}" -X PUT     "$BASE_URL$1" -H "Content-Type: application/json" -d "$2"; }
 
 this_month_start() { date +%Y-%m-01; }
 next_month_start() { date -v1d -v+1m +%Y-%m-%d; }   # macOS date
@@ -102,17 +100,16 @@ check "Area in GET /areas list" "Regression Test Area" "$AREA_IN_LIST"
 section "CUSTOMERS"
 
 CREATE_CUST=$(POST "/api/customers" \
-  "{\"firstName\":\"Regression\",\"lastName\":\"User\",\"doorNumber\":\"T99\",\"streetName\":\"Test Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000099\",\"stbId\":\"STB-REGR-01\",\"monthlyRate\":350,\"subscriptionStartDate\":\"$THIS_MONTH\"}")
+  "{\"firstName\":\"Regression\",\"lastName\":\"User\",\"doorNumber\":\"T99\",\"streetName\":\"Test Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000099\",\"stbId\":\"STB-REGR-01\",\"subscriptionStartDate\":\"$THIS_MONTH\"}")
 CUST_ID=$(echo "$CREATE_CUST" | jq -r '.customerId')
 check_not_null "Create customer → customerId"                                    "$CUST_ID"
 check          "Create customer → status ACTIVE"  "ACTIVE"                       "$(echo "$CREATE_CUST" | jq -r '.status')"
 check          "Create customer → areaName"       "Regression Test Area"         "$(echo "$CREATE_CUST" | jq -r '.areaName')"
-check          "Create customer → currentPaymentAmount" "350"                    "$(echo "$CREATE_CUST" | jq -r '.currentPaymentAmount')"
-check          "Create customer → paymentPending false" "false"                  "$(echo "$CREATE_CUST" | jq -r '.paymentPending')"
+check          "Create customer → subscriptionStatus GRACE" "GRACE"             "$(echo "$CREATE_CUST" | jq -r '.subscriptionStatus')"
 check_not_null "Create customer → subscriptionStart"                             "$(echo "$CREATE_CUST" | jq -r '.currentSubscriptionStart')"
 
 check "Duplicate STB ID → 400" "400" \
-  "$(STATUS_POST "/api/customers" "{\"firstName\":\"Dup\",\"areaId\":$AREA_ID,\"phone\":\"0000000088\",\"stbId\":\"STB-REGR-01\",\"monthlyRate\":300}")"
+  "$(STATUS_POST "/api/customers" "{\"firstName\":\"Dup\",\"areaId\":$AREA_ID,\"phone\":\"0000000088\",\"stbId\":\"STB-REGR-01\"}")"
 
 GET_CUST=$(GET "/api/customers/$CUST_ID")
 check "GET /customers/:id → firstName"  "Regression" "$(echo "$GET_CUST" | jq -r '.firstName')"
@@ -147,7 +144,7 @@ check_not_null "Record payment → recordedByName"                   "$(echo "$P
 CUST_AFTER_PAY=$(GET "/api/customers/$CUST_ID")
 check          "After payment → lastPaymentAmount"  "350.00" "$(echo "$CUST_AFTER_PAY" | jq -r '.lastPaymentAmount')"
 check_not_null "After payment → lastPaymentDate"            "$(echo "$CUST_AFTER_PAY" | jq -r '.lastPaymentDate')"
-check          "After payment → paymentPending"     "false" "$(echo "$CUST_AFTER_PAY" | jq -r '.paymentPending')"
+check          "After payment → subscriptionStatus PAID" "PAID" "$(echo "$CUST_AFTER_PAY" | jq -r '.subscriptionStatus')"
 check_not_null "After payment → next subscriptionStart"     "$(echo "$CUST_AFTER_PAY" | jq -r '.currentSubscriptionStart')"
 
 # Second payment with a different amount — new rate must carry forward
@@ -168,18 +165,20 @@ check "Payment in date-range filter" "$PAY1_ID" "$PAY_IN_TODAY"
 
 # ── SUSPEND & REENROLL ────────────────────────────────────────
 
-section "SUSPEND & REENROLL"
+section "CLOSE ACCOUNT & REENROLL"
 
-check "Suspend customer → 200" "200" "$(STATUS_PUT_NOBODY "/api/customers/$CUST_ID/suspend")"
+check "Close account → 200" "200" \
+  "$(STATUS_PUT "/api/customers/$CUST_ID/close-account" '{"paymentCollected":false}')"
 
 SUSPENDED=$(GET "/api/customers/$CUST_ID")
 check "Status → SUSPENDED"               "SUSPENDED" "$(echo "$SUSPENDED" | jq -r '.status')"
-check "paymentPending cleared on suspend" "false"     "$(echo "$SUSPENDED" | jq -r '.paymentPending')"
+check "Close account → subscriptionStatus SUSPENDED" "SUSPENDED" "$(echo "$SUSPENDED" | jq -r '.subscriptionStatus')"
 
 check "Payment on suspended customer → 400" "400" \
-  "$(STATUS_POST "/api/payments/$CUST_ID" '{"amount":350}')"
+  "$(STATUS_POST "/api/payments/$CUST_ID" "{\"amount\":350,\"forMonth\":\"$THIS_MONTH\"}")"
 
-check "Double-suspend → 400" "400" "$(STATUS_PUT_NOBODY "/api/customers/$CUST_ID/suspend")"
+check "Close ACCOUNT_CLOSED → 400" "400" \
+  "$(STATUS_PUT "/api/customers/$CUST_ID/close-account" '{"paymentCollected":true}')"
 
 CUST_NOT_ACTIVE=$(GET "/api/customers?status=ACTIVE" | jq -r ".[] | select(.customerId == $CUST_ID) | .customerId")
 check "Suspended customer absent from ?status=ACTIVE" "" "$CUST_NOT_ACTIVE"
@@ -188,11 +187,11 @@ CUST_IN_SUSPENDED=$(GET "/api/customers?status=SUSPENDED" | jq -r ".[] | select(
 check "Suspended customer in ?status=SUSPENDED" "$CUST_ID" "$CUST_IN_SUSPENDED"
 
 NEXT_START=$(next_month_start)
-REENROLL=$(PUT "/api/customers/$CUST_ID/reenroll" "{\"monthlyRate\":350,\"startDate\":\"$NEXT_START\"}")
+REENROLL=$(PUT "/api/customers/$CUST_ID/reenroll" "{\"startDate\":\"$NEXT_START\"}")
 check "Reenroll → status ACTIVE" "ACTIVE" "$(echo "$REENROLL" | jq -r '.status')"
 
 check "Cannot reenroll active customer → 400" "400" \
-  "$(STATUS_PUT "/api/customers/$CUST_ID/reenroll" "{\"monthlyRate\":350,\"startDate\":\"$NEXT_START\"}")"
+  "$(STATUS_PUT "/api/customers/$CUST_ID/reenroll" "{\"startDate\":\"$NEXT_START\"}")"
 
 # ── SCHEDULER ────────────────────────────────────────────────
 
@@ -203,14 +202,14 @@ section "SCHEDULER"
 #   → scheduler should move it ACTIVE→GRACE→PAYMENT_PENDING in one run
 TWO_MONTHS_AGO=$(date -v1d -v-2m +%Y-%m-%d)
 CUST_OLD=$(POST "/api/customers" \
-  "{\"firstName\":\"SchedOld\",\"lastName\":\"Test\",\"doorNumber\":\"S1\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000097\",\"monthlyRate\":200,\"subscriptionStartDate\":\"$TWO_MONTHS_AGO\"}")
+  "{\"firstName\":\"SchedOld\",\"lastName\":\"Test\",\"doorNumber\":\"S1\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000097\",\"subscriptionStartDate\":\"$TWO_MONTHS_AGO\"}")
 CUST_OLD_ID=$(echo "$CUST_OLD" | jq -r '.customerId')
 check_not_null "Create old-subscription customer"                 "$CUST_OLD_ID"
-check "Old customer: initial paymentPending is false" "false"     "$(echo "$CUST_OLD" | jq -r '.paymentPending')"
+check "Old customer: initial subscriptionStatus GRACE" "GRACE"    "$(echo "$CUST_OLD" | jq -r '.subscriptionStatus')"
 
 # Customer with subscription starting this month — must not be touched by scheduler
 CUST_CURR_SCHED=$(POST "/api/customers" \
-  "{\"firstName\":\"SchedCurr\",\"lastName\":\"Test\",\"doorNumber\":\"S2\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000096\",\"monthlyRate\":200,\"subscriptionStartDate\":\"$THIS_MONTH\"}")
+  "{\"firstName\":\"SchedCurr\",\"lastName\":\"Test\",\"doorNumber\":\"S2\",\"streetName\":\"Sched Street\",\"areaId\":$AREA_ID,\"phone\":\"0000000096\",\"subscriptionStartDate\":\"$THIS_MONTH\"}")
 CUST_CURR_SCHED_ID=$(echo "$CUST_CURR_SCHED" | jq -r '.customerId')
 check_not_null "Create current-subscription customer"             "$CUST_CURR_SCHED_ID"
 
@@ -219,17 +218,17 @@ check "Scheduler trigger → 200" "200" "$(STATUS_POST "/api/admin/scheduler/run
 
 # Old subscription: should now be PAYMENT_PENDING (passed through GRACE in same run)
 CUST_OLD_AFTER=$(GET "/api/customers/$CUST_OLD_ID")
-check "Old subscription → paymentPending true"   "true"   "$(echo "$CUST_OLD_AFTER" | jq -r '.paymentPending')"
+check "Old subscription → subscriptionStatus PAYMENT_PENDING" "PAYMENT_PENDING" "$(echo "$CUST_OLD_AFTER" | jq -r '.subscriptionStatus')"
 check "Old subscription → customer still ACTIVE" "ACTIVE" "$(echo "$CUST_OLD_AFTER" | jq -r '.status')"
 
 # Current subscription: must be unaffected
 CUST_CURR_AFTER=$(GET "/api/customers/$CUST_CURR_SCHED_ID")
-check "Current subscription → paymentPending still false" "false" "$(echo "$CUST_CURR_AFTER" | jq -r '.paymentPending')"
+check "Current subscription → customer still ACTIVE" "ACTIVE" "$(echo "$CUST_CURR_AFTER" | jq -r '.status')"
 
 # Cleanup scheduler test customers
-STATUS_PUT_NOBODY "/api/customers/$CUST_OLD_ID/suspend" > /dev/null
+STATUS_PUT "/api/customers/$CUST_OLD_ID/close-account" '{"paymentCollected":false}' > /dev/null
 DELETE_REQ "/api/customers/$CUST_OLD_ID" > /dev/null
-STATUS_PUT_NOBODY "/api/customers/$CUST_CURR_SCHED_ID/suspend" > /dev/null
+STATUS_PUT "/api/customers/$CUST_CURR_SCHED_ID/close-account" '{"paymentCollected":false}' > /dev/null
 DELETE_REQ "/api/customers/$CUST_CURR_SCHED_ID" > /dev/null
 pass "Scheduler test customers cleaned up"
 
@@ -237,7 +236,7 @@ pass "Scheduler test customers cleaned up"
 
 section "CLEANUP"
 
-STATUS_PUT_NOBODY "/api/customers/$CUST_ID/suspend" > /dev/null
+STATUS_PUT "/api/customers/$CUST_ID/close-account" '{"paymentCollected":false}' > /dev/null
 
 DEL_STATUS=$(DELETE_REQ "/api/customers/$CUST_ID")
 check "Delete suspended customer → 204" "204" "$DEL_STATUS"
