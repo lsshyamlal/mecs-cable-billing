@@ -22,6 +22,24 @@ export function AuthProvider({ children }) {
     setAuth(null);
   };
 
+  // Sync auth state across tabs: another tab signing in/out updates localStorage,
+  // and the 'storage' event fires in every OTHER tab of the same browser profile.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== 'mecs_auth') return;
+      if (e.newValue == null) {
+        setAuth(null);
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      } else {
+        try { setAuth(JSON.parse(e.newValue)); } catch { setAuth(null); }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   useEffect(() => {
     if (!auth) return;
 

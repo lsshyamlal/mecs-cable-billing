@@ -6,6 +6,7 @@ import com.mecscable.billing.dto.response.AdminProfileResponse;
 import com.mecscable.billing.entity.Admin;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.AdminRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,16 @@ public class AdminService {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final AuthService authService;
 
     public AdminService(AdminRepository adminRepository,
                         PasswordEncoder passwordEncoder,
-                        AuditService auditService) {
+                        AuditService auditService,
+                        AuthService authService) {
         this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
+        this.authService = authService;
     }
 
     public AdminProfileResponse getProfile(Long adminId) {
@@ -52,7 +56,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void changePassword(Long adminId, ChangeAdminPasswordRequest req) {
+    public void changePassword(Long adminId, ChangeAdminPasswordRequest req, HttpServletResponse response) {
         Admin admin = findAdmin(adminId);
 
         if (!passwordEncoder.matches(req.currentPassword(), admin.getPasswordHash())) {
@@ -60,7 +64,9 @@ public class AdminService {
         }
 
         admin.setPasswordHash(passwordEncoder.encode(req.newPassword()));
-        adminRepository.save(admin);
+        // Rotate sid + reissue cookies: invalidates every other active session for this
+        // admin on its next request while keeping the current tab signed in.
+        authService.rotateAdminSessionAndReissueCookies(admin, response);
         auditService.log(adminId, "CHANGE_PASSWORD", "Admin", adminId, null);
     }
 

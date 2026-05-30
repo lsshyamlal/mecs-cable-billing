@@ -44,11 +44,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String subject = jwtService.extractSubject(token);
         String role = jwtService.extractRole(token);
+        String tokenSessionId = jwtService.extractSessionId(token);
 
         if (subject != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = "ROLE_ADMIN".equals(role)
                     ? adminUserDetailsService.loadUserByUsername(subject)
                     : customerUserDetailsService.loadUserByUsername(subject);
+
+            String currentSessionId = ((UserPrincipal) userDetails).getCurrentSessionId();
+            if (tokenSessionId == null || !tokenSessionId.equals(currentSessionId)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());

@@ -7,6 +7,7 @@ import com.mecscable.billing.dto.response.SchedulerResultResponse;
 import com.mecscable.billing.scheduler.BillingScheduler;
 import com.mecscable.billing.security.UserPrincipal;
 import com.mecscable.billing.service.AdminService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,8 +45,9 @@ public class AdminController {
     @PutMapping("/me/password")
     public ResponseEntity<Void> changePassword(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Valid @RequestBody ChangeAdminPasswordRequest req) {
-        adminService.changePassword(principal.getUserId(), req);
+            @Valid @RequestBody ChangeAdminPasswordRequest req,
+            HttpServletResponse response) {
+        adminService.changePassword(principal.getUserId(), req, response);
         return ResponseEntity.ok().build();
     }
 }

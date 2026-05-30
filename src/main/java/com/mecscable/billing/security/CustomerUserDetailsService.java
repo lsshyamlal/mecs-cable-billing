@@ -33,6 +33,6 @@ public class CustomerUserDetailsService implements UserDetailsService {
                 || ((customer.getStatus() == CustomerStatus.SUSPENDED
                      || customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED)
                     && withinReadOnlyWindow);
-        return new UserPrincipal(customer.getCustomerId(), customer.getPhone(), customer.getPasswordHash(), "ROLE_CUSTOMER", active);
+        return new UserPrincipal(customer.getCustomerId(), customer.getPhone(), customer.getPasswordHash(), "ROLE_CUSTOMER", active, customer.getCurrentSessionId());
     }
 }

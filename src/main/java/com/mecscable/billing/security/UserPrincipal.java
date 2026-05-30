@@ -14,17 +14,23 @@ public class UserPrincipal implements UserDetails {
     private final String password;
     private final List<GrantedAuthority> authorities;
     private final boolean active;
+    private final String currentSessionId;
 
-    public UserPrincipal(Long userId, String username, String password, String role, boolean active) {
+    public UserPrincipal(Long userId, String username, String password, String role, boolean active, String currentSessionId) {
         this.userId = userId;
         this.username = username;
         this.password = password;
         this.authorities = List.of(new SimpleGrantedAuthority(role));
         this.active = active;
+        this.currentSessionId = currentSessionId;
     }
 
     public Long getUserId() {
         return userId;
+    }
+
+    public String getCurrentSessionId() {
+        return currentSessionId;
     }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }

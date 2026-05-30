@@ -91,4 +91,7 @@ public class Customer {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @Column(name = "current_session_id", length = 64)
+    private String currentSessionId;
 }

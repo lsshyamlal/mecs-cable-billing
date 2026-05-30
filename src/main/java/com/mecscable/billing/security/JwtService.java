@@ -23,20 +23,22 @@ public class JwtService {
     @Value("${mecs.jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
 
-    public String generateAccessToken(String subject, String role, Long userId) {
+    public String generateAccessToken(String subject, String role, Long userId, String sessionId) {
         return Jwts.builder()
                 .subject(subject)
                 .claim("role", role)
                 .claim("userId", userId)
+                .claim("sid", sessionId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiryMs))
                 .signWith(signingKey())
                 .compact();
     }
 
-    public String generateRefreshToken(String subject) {
+    public String generateRefreshToken(String subject, String sessionId) {
         return Jwts.builder()
                 .subject(subject)
+                .claim("sid", sessionId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshTokenExpiryMs))
                 .signWith(signingKey())
@@ -53,6 +55,10 @@ public class JwtService {
 
     public Long extractUserId(String token) {
         return extractAllClaims(token).get("userId", Long.class);
+    }
+
+    public String extractSessionId(String token) {
+        return extractAllClaims(token).get("sid", String.class);
     }
 
     public boolean isTokenValid(String token) {

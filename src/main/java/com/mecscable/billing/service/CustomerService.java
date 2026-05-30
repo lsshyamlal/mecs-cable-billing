@@ -32,6 +32,7 @@ public class CustomerService {
     private final CustomerStatusHistoryRepository statusHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final AuthService authService;
 
     public CustomerService(CustomerRepository customerRepository,
                            AreaRepository areaRepository,
@@ -40,7 +41,8 @@ public class CustomerService {
                            PaymentRepository paymentRepository,
                            CustomerStatusHistoryRepository statusHistoryRepository,
                            PasswordEncoder passwordEncoder,
-                           AuditService auditService) {
+                           AuditService auditService,
+                           AuthService authService) {
         this.customerRepository = customerRepository;
         this.areaRepository = areaRepository;
         this.adminRepository = adminRepository;
@@ -49,6 +51,7 @@ public class CustomerService {
         this.statusHistoryRepository = statusHistoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
+        this.authService = authService;
     }
 
     public List<CustomerResponse> listCustomers(String status, String futureStatus, Long areaId) {
@@ -223,7 +226,9 @@ public class CustomerService {
     public void resetPassword(Long customerId, String newPassword, Long adminId) {
         Customer customer = findCustomer(customerId);
         customer.setPasswordHash(passwordEncoder.encode(newPassword));
-        customerRepository.save(customer);
+        // Force the customer to re-authenticate on every device: any existing JWT
+        // will fail the sid check in JwtAuthFilter on its next request.
+        authService.invalidateCustomerSession(customer);
         auditService.log(adminId, "RESET_CUSTOMER_PASSWORD", "Customer", customerId, null);
     }
 

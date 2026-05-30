@@ -44,4 +44,7 @@ public class Admin {
 
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;
+
+    @Column(name = "current_session_id", length = 64)
+    private String currentSessionId;
 }

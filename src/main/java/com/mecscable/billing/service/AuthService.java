@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -74,6 +75,33 @@ public class AuthService {
         clearCookies(response);
     }
 
+    /**
+     * Rotates the admin's session id and reissues auth cookies on the current response.
+     * Use after a password change so the current tab stays signed in while every other
+     * device's existing JWT becomes invalid (sid mismatch) on its next request.
+     */
+    public void rotateAdminSessionAndReissueCookies(Admin admin, HttpServletResponse response) {
+        String sessionId = UUID.randomUUID().toString();
+        admin.setCurrentSessionId(sessionId);
+        adminRepository.save(admin);
+
+        String accessToken = jwtService.generateAccessToken(
+                admin.getEmail(), "ROLE_ADMIN", admin.getAdminId(), sessionId);
+        String refreshToken = jwtService.generateRefreshToken(admin.getEmail(), sessionId);
+        addCookie(response, "access_token", accessToken, accessTokenExpiryMs / 1000);
+        addCookie(response, "refresh_token", refreshToken, refreshTokenExpiryMs / 1000);
+    }
+
+    /**
+     * Nulls out the customer's session id so any existing JWT for that customer
+     * fails the JwtAuthFilter sid check on the next request. Used when an admin
+     * resets the customer's password — the customer must re-authenticate.
+     */
+    public void invalidateCustomerSession(Customer customer) {
+        customer.setCurrentSessionId(null);
+        customerRepository.save(customer);
+    }
+
     public LoginResponse refresh(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = extractCookie(request, "refresh_token");
         if (refreshToken == null || !jwtService.isTokenValid(refreshToken)) {
@@ -81,20 +109,27 @@ public class AuthService {
         }
 
         String subject = jwtService.extractSubject(refreshToken);
+        String sessionId = jwtService.extractSessionId(refreshToken);
 
         Optional<Admin> adminOpt = adminRepository.findByEmail(subject);
         if (adminOpt.isPresent()) {
             Admin admin = adminOpt.get();
+            if (sessionId == null || !sessionId.equals(admin.getCurrentSessionId())) {
+                throw new BadCredentialsException("Session has been replaced by a newer login");
+            }
             String newAccessToken = jwtService.generateAccessToken(
-                    admin.getEmail(), "ROLE_ADMIN", admin.getAdminId());
+                    admin.getEmail(), "ROLE_ADMIN", admin.getAdminId(), sessionId);
             addCookie(response, "access_token", newAccessToken, accessTokenExpiryMs / 1000);
             return toLoginResponse(admin);
         }
 
         Customer customer = customerRepository.findByPhone(subject)
                 .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+        if (sessionId == null || !sessionId.equals(customer.getCurrentSessionId())) {
+            throw new BadCredentialsException("Session has been replaced by a newer login");
+        }
         String newAccessToken = jwtService.generateAccessToken(
-                customer.getPhone(), "ROLE_CUSTOMER", customer.getCustomerId());
+                customer.getPhone(), "ROLE_CUSTOMER", customer.getCustomerId(), sessionId);
         addCookie(response, "access_token", newAccessToken, accessTokenExpiryMs / 1000);
         return toLoginResponse(customer);
     }
@@ -106,11 +141,13 @@ public class AuthService {
         if (!admin.isActive()) {
             throw new DisabledException("Admin account is disabled");
         }
+        String sessionId = UUID.randomUUID().toString();
+        admin.setCurrentSessionId(sessionId);
         admin.setLastLoginAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
         adminRepository.save(admin);
 
-        String accessToken = jwtService.generateAccessToken(admin.getEmail(), "ROLE_ADMIN", admin.getAdminId());
-        String refreshToken = jwtService.generateRefreshToken(admin.getEmail());
+        String accessToken = jwtService.generateAccessToken(admin.getEmail(), "ROLE_ADMIN", admin.getAdminId(), sessionId);
+        String refreshToken = jwtService.generateRefreshToken(admin.getEmail(), sessionId);
         addCookie(response, "access_token", accessToken, accessTokenExpiryMs / 1000);
         addCookie(response, "refresh_token", refreshToken, refreshTokenExpiryMs / 1000);
         return toLoginResponse(admin);
@@ -131,9 +168,13 @@ public class AuthService {
             }
         }
 
+        String sessionId = UUID.randomUUID().toString();
+        customer.setCurrentSessionId(sessionId);
+        customerRepository.save(customer);
+
         String accessToken = jwtService.generateAccessToken(
-                customer.getPhone(), "ROLE_CUSTOMER", customer.getCustomerId());
-        String refreshToken = jwtService.generateRefreshToken(customer.getPhone());
+                customer.getPhone(), "ROLE_CUSTOMER", customer.getCustomerId(), sessionId);
+        String refreshToken = jwtService.generateRefreshToken(customer.getPhone(), sessionId);
         addCookie(response, "access_token", accessToken, accessTokenExpiryMs / 1000);
         addCookie(response, "refresh_token", refreshToken, refreshTokenExpiryMs / 1000);
         return toLoginResponse(customer);
