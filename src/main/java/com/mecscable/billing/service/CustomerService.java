@@ -246,6 +246,10 @@ public class CustomerService {
         if (sub.getStatus() == SubscriptionStatus.SUSPENDED || sub.getStatus() == SubscriptionStatus.CANCELLED) {
             throw new IllegalArgumentException("Subscription is already " + sub.getStatus().name().toLowerCase());
         }
+        if (sub.getStatus() == SubscriptionStatus.SCHEDULED) {
+            throw new IllegalArgumentException(
+                    "Future subscriptions can only be cancelled by closing the customer account.");
+        }
         if (sub.getDeactivationDate() != null) {
             throw new IllegalArgumentException("Subscription already has a pending deactivation on " + sub.getDeactivationDate());
         }
@@ -262,27 +266,21 @@ public class CustomerService {
         boolean hasOutstanding = sub.getStatus() == SubscriptionStatus.GRACE
                 || sub.getStatus() == SubscriptionStatus.PAYMENT_PENDING;
 
-        if (sub.getStatus() == SubscriptionStatus.SCHEDULED) {
-            // Future subscription: cancel immediately. No payment was due.
-            sub.setStatus(SubscriptionStatus.CANCELLED);
-        } else {
-            // Current subscription: requires a future-dated deactivation within the billing period.
-            LocalDate deactivationDate = request.deactivationDate();
-            if (deactivationDate == null) {
-                throw new IllegalArgumentException("Deactivation date is required for a current subscription");
-            }
-            if (deactivationDate.isBefore(today)) {
-                throw new IllegalArgumentException("Deactivation date cannot be in the past");
-            }
-            if (deactivationDate.isAfter(sub.getEndDate())) {
-                throw new IllegalArgumentException("Deactivation date cannot be after the subscription end date (" + sub.getEndDate() + ")");
-            }
-            if (hasOutstanding && request.paymentCollected() == null) {
-                throw new IllegalArgumentException(
-                        "paymentCollected is required when deactivating a subscription with outstanding dues");
-            }
-            sub.setDeactivationDate(deactivationDate);
+        LocalDate deactivationDate = request.deactivationDate();
+        if (deactivationDate == null) {
+            throw new IllegalArgumentException("Deactivation date is required");
         }
+        if (deactivationDate.isBefore(today)) {
+            throw new IllegalArgumentException("Deactivation date cannot be in the past");
+        }
+        if (deactivationDate.isAfter(sub.getEndDate())) {
+            throw new IllegalArgumentException("Deactivation date cannot be after the subscription end date (" + sub.getEndDate() + ")");
+        }
+        if (hasOutstanding && request.paymentCollected() == null) {
+            throw new IllegalArgumentException(
+                    "paymentCollected is required when deactivating a subscription with outstanding dues");
+        }
+        sub.setDeactivationDate(deactivationDate);
         subscriptionRepository.save(sub);
 
         if (hasOutstanding) {
@@ -299,7 +297,8 @@ public class CustomerService {
         }
 
         recalcCustomerStatusAfterSubscriptionChange(customer, adminId);
-        auditService.log(adminId, "DEACTIVATE_SUBSCRIPTION", "Subscription", subscriptionId, request.notes());
+        auditService.log(adminId, "DEACTIVATE_SUBSCRIPTION", "Subscription", subscriptionId,
+                "{\"notes\":\"" + escapeJson(request.notes().trim()) + "\"}");
     }
 
     private void recordOutstandingPayment(Customer customer, Subscription sub, Admin admin,
