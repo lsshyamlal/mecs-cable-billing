@@ -141,7 +141,7 @@ public class CustomerService {
 
         customer = customerRepository.save(customer);
 
-        createSubscription(customer, null, request.subscriptionStartDate(), adminId);
+        createSubscription(customer, request.monthlyRate(), request.subscriptionStartDate(), adminId);
 
         saveStatusEvent(customer, null, CustomerStatus.ACTIVE, adminId, null);
         auditService.log(adminId, "CREATE_CUSTOMER", "Customer", customer.getCustomerId(), null);
@@ -371,7 +371,8 @@ public class CustomerService {
         customer.setSuspendedAt(null);
         customerRepository.save(customer);
 
-        Subscription sub = createSubscription(customer, customer.getCurrentPaymentAmount(), request.startDate(), adminId);
+        BigDecimal rate = request.monthlyRate() != null ? request.monthlyRate() : customer.getCurrentPaymentAmount();
+        Subscription sub = createSubscription(customer, rate, request.startDate(), adminId);
         sub.setStatus(SubscriptionStatus.PAYMENT_PENDING);
         subscriptionRepository.save(sub);
 

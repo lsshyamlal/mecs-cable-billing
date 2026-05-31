@@ -34,7 +34,7 @@ function Field({ label, value }) {
   );
 }
 
-function InputRow({ label, name, value, onChange, type = 'text', required, disabled }) {
+function InputRow({ label, name, value, onChange, type = 'text', required, disabled, step, min }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -48,6 +48,8 @@ function InputRow({ label, name, value, onChange, type = 'text', required, disab
         onKeyDown={type === 'number' ? (e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault() : undefined}
         required={required}
         disabled={disabled}
+        step={step}
+        min={min}
         className={`${INPUT} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       />
     </div>
@@ -227,9 +229,10 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
 }
 
 // ── Re-enroll Modal ───────────────────────────────────────────
-function ReEnrollModal({ customerId, onClose, onSuccess }) {
+function ReEnrollModal({ customer, customerId, onClose, onSuccess }) {
   const today = new Date().toISOString().split('T')[0];
-  const [form, setForm] = useState({ startDate: today });
+  const existingRate = customer?.currentPaymentAmount ?? '';
+  const [form, setForm] = useState({ startDate: today, monthlyRate: existingRate });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -238,7 +241,10 @@ function ReEnrollModal({ customerId, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await reEnrollCustomer(customerId, { startDate: form.startDate || null });
+      await reEnrollCustomer(customerId, {
+        startDate: form.startDate || null,
+        monthlyRate: form.monthlyRate !== '' ? Number(form.monthlyRate) : null,
+      });
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to re-enroll customer.');
@@ -251,8 +257,9 @@ function ReEnrollModal({ customerId, onClose, onSuccess }) {
     <Modal title="Re-enroll Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <ModalError msg={error} />
-        <p className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2">Re-enrolls at the customer's existing subscription rate. Record payment separately after re-enrolling.</p>
+        <p className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2">Defaults to the customer's existing subscription rate. Record payment separately after re-enrolling.</p>
         <InputRow label="Start Date" name="startDate" type="date" value={form.startDate} onChange={onChange} />
+        <InputRow label="Monthly Rate (₹)" name="monthlyRate" type="number" step="0.01" min="0.01" value={form.monthlyRate} onChange={onChange} required />
         <div className="flex gap-2 pt-1">
           <button type="submit" disabled={loading}
             className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
@@ -993,7 +1000,7 @@ export default function CustomerDetail() {
         <EditCustomerModal customer={customer} cities={cities} areas={areas} streets={streets} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
       )}
       {modal === 'reenroll' && (
-        <ReEnrollModal customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Customer re-enrolled.')} />
+        <ReEnrollModal customer={customer} customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Customer re-enrolled.')} />
       )}
       {modal === 'resetPassword' && (
         <ResetPasswordModal customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Password reset.')} />

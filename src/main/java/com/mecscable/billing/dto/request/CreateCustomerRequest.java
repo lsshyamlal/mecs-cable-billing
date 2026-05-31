@@ -1,8 +1,10 @@
 package com.mecscable.billing.dto.request;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record CreateCustomerRequest(
@@ -16,5 +18,8 @@ public record CreateCustomerRequest(
         String upiId,
         String stbId,
         String portalPassword,
-        LocalDate subscriptionStartDate
+        LocalDate subscriptionStartDate,
+        @NotNull(message = "Monthly rate is required")
+        @DecimalMin(value = "0.01", message = "Monthly rate must be greater than 0")
+        BigDecimal monthlyRate
 ) {}

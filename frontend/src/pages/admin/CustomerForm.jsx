@@ -26,6 +26,7 @@ export default function CustomerForm() {
     upiId: '', stbId: '', doorNumber: '',
     cityId: '', areaId: '', streetId: '',
     subscriptionStartDate: '',
+    monthlyRate: '',
     portalPassword: '',
   });
   const [loading, setLoading] = useState(false);
@@ -65,6 +66,7 @@ export default function CustomerForm() {
         areaId: form.areaId ? Number(form.areaId) : null,
         streetId: form.streetId ? Number(form.streetId) : null,
         subscriptionStartDate: form.subscriptionStartDate || null,
+        monthlyRate: Number(form.monthlyRate),
         portalPassword: form.portalPassword || null,
       });
       navigate(`/admin/customers/${res.data.customerId}`);
@@ -171,6 +173,9 @@ export default function CustomerForm() {
             <Field label="Subscription Start Date">
               <input name="subscriptionStartDate" type="date" value={form.subscriptionStartDate} onChange={onChange} className={INPUT} />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to use today's date.</p>
+            </Field>
+            <Field label="Monthly Rate (₹)" required>
+              <input name="monthlyRate" type="number" step="0.01" min="0.01" value={form.monthlyRate} onChange={onChange} required className={INPUT} />
             </Field>
           </div>
         </div>
