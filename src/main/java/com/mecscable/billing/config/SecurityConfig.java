@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**").permitAll()
                 .requestMatchers("/api/auth/logout").authenticated()
                 .requestMatchers("/api/portal/**").hasRole("CUSTOMER")
+                .requestMatchers("/api/employee/**").hasRole("EMPLOYEE")
                 .requestMatchers("/api/**").hasRole("ADMIN")
                 .anyRequest().permitAll()  // SPA static assets + React Router paths; React handles client-side auth
             )

@@ -15,6 +15,8 @@ public record PaymentResponse(
         String paymentMethod,
         Long recordedByAdminId,
         String recordedByName,
+        Long recordedByEmployeeId,
+        String recordedByEmployeeName,
         String notes,
         OffsetDateTime createdAt,
         String subscriptionStatus,

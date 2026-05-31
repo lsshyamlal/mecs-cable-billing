@@ -9,23 +9,22 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "cities")
+@Table(name = "companies")
 @Getter
 @Setter
 @NoArgsConstructor
-public class City {
+public class Company {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "city_id")
-    private Long cityId;
+    @Column(name = "company_id")
+    private Long companyId;
 
-    @Column(name = "city_name", unique = true, nullable = false, length = 200)
-    private String cityName;
+    @Column(name = "company_name", unique = true, nullable = false, length = 200)
+    private String companyName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
-    private Company company;
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

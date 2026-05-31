@@ -14,9 +14,13 @@ public class AuditService {
     }
 
     public void log(Long actorId, String action, String entityType, Long entityId, String details) {
+        logWithRole(actorId, "ADMIN", action, entityType, entityId, details);
+    }
+
+    public void logWithRole(Long actorId, String role, String action, String entityType, Long entityId, String details) {
         AuditLog entry = new AuditLog();
         entry.setActorId(actorId);
-        entry.setActorRole("ADMIN");
+        entry.setActorRole(role);
         entry.setAction(action);
         entry.setEntityType(entityType);
         entry.setEntityId(entityId);

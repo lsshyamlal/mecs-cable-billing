@@ -39,8 +39,12 @@ public class Payment {
     private String paymentMethod;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recorded_by", nullable = false)
+    @JoinColumn(name = "recorded_by")
     private Admin recordedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recorded_by_employee")
+    private Employee recordedByEmployee;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pack_id")

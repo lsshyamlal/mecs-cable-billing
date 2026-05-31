@@ -1,6 +1,7 @@
 package com.mecscable.billing.repository;
 
 import com.mecscable.billing.entity.Customer;
+import com.mecscable.billing.entity.Employee;
 import com.mecscable.billing.entity.Payment;
 import com.mecscable.billing.entity.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,4 +25,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentDate BETWEEN :from AND :to")
     BigDecimal sumAmountByPaymentDateBetween(@Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
+
+    boolean existsByRecordedByEmployee(Employee employee);
 }

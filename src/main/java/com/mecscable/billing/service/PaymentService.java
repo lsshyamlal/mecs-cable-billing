@@ -7,6 +7,7 @@ import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +27,8 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final AdminRepository adminRepository;
+    private final EmployeeRepository employeeRepository;
+    private final EmployeeAreaAssignmentRepository employeeAreaAssignmentRepository;
     private final SubscriptionPackRepository subscriptionPackRepository;
     private final AuditService auditService;
 
@@ -33,12 +36,16 @@ public class PaymentService {
                           CustomerRepository customerRepository,
                           SubscriptionRepository subscriptionRepository,
                           AdminRepository adminRepository,
+                          EmployeeRepository employeeRepository,
+                          EmployeeAreaAssignmentRepository employeeAreaAssignmentRepository,
                           SubscriptionPackRepository subscriptionPackRepository,
                           AuditService auditService) {
         this.paymentRepository = paymentRepository;
         this.customerRepository = customerRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.adminRepository = adminRepository;
+        this.employeeRepository = employeeRepository;
+        this.employeeAreaAssignmentRepository = employeeAreaAssignmentRepository;
         this.subscriptionPackRepository = subscriptionPackRepository;
         this.auditService = auditService;
     }
@@ -145,6 +152,86 @@ public class PaymentService {
         return paymentRepository.sumAmountByPaymentDateBetween(from, to);
     }
 
+    @Transactional
+    public PaymentResponse recordPaymentByEmployee(Long customerId, RecordPaymentRequest request, Long employeeId) {
+        Customer customer = findCustomer(customerId);
+        if (customer.getStatus() != CustomerStatus.ACTIVE) {
+            throw new IllegalArgumentException("Cannot record payment for a suspended customer");
+        }
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        boolean hasAccess = employeeAreaAssignmentRepository
+                .findByEmployee(employee)
+                .stream()
+                .anyMatch(a -> a.getArea().getAreaId().equals(customer.getArea().getAreaId()));
+        if (!hasAccess) {
+            throw new AccessDeniedException("Employee does not manage this customer's area");
+        }
+
+        LocalDate firstOfMonth = request.forMonth().withDayOfMonth(1);
+        LocalDate lastOfMonth = firstOfMonth.withDayOfMonth(firstOfMonth.lengthOfMonth());
+        Subscription targetSub = subscriptionRepository
+                .findByCustomerAndStartDateBetween(customer, firstOfMonth, lastOfMonth)
+                .stream()
+                .filter(s -> List.of(SubscriptionStatus.SCHEDULED, SubscriptionStatus.GRACE, SubscriptionStatus.PAYMENT_PENDING)
+                        .contains(s.getStatus()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No payable subscription found for " + firstOfMonth.getMonth() + " " + firstOfMonth.getYear()));
+
+        SubscriptionPack pack = null;
+        if (request.packId() != null) {
+            pack = subscriptionPackRepository.findById(request.packId()).orElse(null);
+        }
+
+        OffsetDateTime payDate = OffsetDateTime.now(IST);
+
+        Payment payment = new Payment();
+        payment.setCustomer(customer);
+        payment.setSubscription(targetSub);
+        payment.setAmount(request.amount());
+        payment.setPaymentDate(payDate);
+        payment.setPaymentMethod(request.paymentMethod());
+        payment.setRecordedByEmployee(employee);
+        payment.setNotes(request.notes());
+        payment.setPack(pack);
+        payment.setManualOverride(Boolean.TRUE.equals(request.manualOverride()));
+        payment = paymentRepository.save(payment);
+
+        targetSub.setStatus(SubscriptionStatus.PAID);
+        targetSub.setPack(pack);
+        subscriptionRepository.save(targetSub);
+
+        LocalDate nextStart = targetSub.getEndDate().plusDays(1);
+        LocalDate nextEnd = nextStart.withDayOfMonth(nextStart.lengthOfMonth());
+        boolean nextExists = subscriptionRepository
+                .findByCustomerAndStartDateBetween(customer, nextStart, nextEnd)
+                .stream()
+                .anyMatch(s -> s.getStatus() != SubscriptionStatus.CANCELLED);
+        if (!nextExists) {
+            Subscription nextSub = new Subscription();
+            nextSub.setCustomer(customer);
+            nextSub.setMonthlyRate(request.amount());
+            nextSub.setStartDate(nextStart);
+            nextSub.setEndDate(nextEnd);
+            nextSub.setStatus(SubscriptionStatus.SCHEDULED);
+            nextSub.setPack(pack);
+            subscriptionRepository.save(nextSub);
+        }
+
+        customer.setLastPaymentAmount(request.amount());
+        customer.setLastPaymentDate(payDate.atZoneSameInstant(IST).toLocalDate());
+        customer.setCurrentPaymentAmount(request.amount());
+        customerRepository.save(customer);
+
+        auditService.logWithRole(employeeId, "EMPLOYEE", "RECORD_PAYMENT", "Payment", payment.getPaymentId(),
+                "{\"amount\":" + request.amount() + ",\"forMonth\":\"" + firstOfMonth + "\",\"customerId\":" + customerId + "}");
+
+        return toResponse(payment);
+    }
+
     private Customer findCustomer(Long customerId) {
         return customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + customerId));
@@ -153,6 +240,7 @@ public class PaymentService {
     private PaymentResponse toResponse(Payment p) {
         Customer c = p.getCustomer();
         Admin a = p.getRecordedBy();
+        Employee emp = p.getRecordedByEmployee();
         Subscription sub = p.getSubscription();
         LocalDate forMonth = sub != null ? sub.getStartDate().withDayOfMonth(1) : null;
         SubscriptionPack pack = p.getPack();
@@ -165,8 +253,10 @@ public class PaymentService {
                 p.getAmount(),
                 p.getPaymentDate(),
                 p.getPaymentMethod(),
-                a.getAdminId(),
-                a.getFirstName() + (a.getLastName() != null ? " " + a.getLastName() : ""),
+                a != null ? a.getAdminId() : null,
+                a != null ? (a.getFirstName() + (a.getLastName() != null ? " " + a.getLastName() : "")) : null,
+                emp != null ? emp.getEmployeeId() : null,
+                emp != null ? (emp.getFirstName() + (emp.getLastName() != null ? " " + emp.getLastName() : "")) : null,
                 p.getNotes(),
                 p.getCreatedAt(),
                 sub != null ? sub.getStatus().name() : null,

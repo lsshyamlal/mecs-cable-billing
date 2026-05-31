@@ -73,7 +73,8 @@ export const getSubscriptionHistory = () =>
   api.get('/portal/me/subscription/history');
 
 // ── Cities ───────────────────────────────────────────────────
-export const getCities = () => api.get('/cities');
+export const getCities = (companyId) =>
+  api.get('/cities', companyId ? { params: { companyId } } : {});
 export const createCity = (data) => api.post('/cities', data);
 export const updateCity = (id, data) => api.put(`/cities/${id}`, data);
 export const deleteCity = (id) => api.delete(`/cities/${id}`);
@@ -124,6 +125,30 @@ export const exportReportUrl = (path, params) => {
   const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v != null)));
   return `/api/${path}?${qs}`;
 };
+
+// ── Companies ────────────────────────────────────────────────
+export const getCompanies = () => api.get('/companies');
+export const createCompany = (data) => api.post('/companies', data);
+export const updateCompany = (id, data) => api.put(`/companies/${id}`, data);
+export const deleteCompany = (id) => api.delete(`/companies/${id}`);
+
+// ── Groups ───────────────────────────────────────────────────
+export const getGroups = (companyId) =>
+  api.get('/groups', companyId ? { params: { companyId } } : {});
+export const createGroup = (data) => api.post('/groups', data);
+export const updateGroup = (id, data) => api.put(`/groups/${id}`, data);
+export const deleteGroup = (id) => api.delete(`/groups/${id}`);
+
+// ── Employees ────────────────────────────────────────────────
+export const getEmployees = (groupId) =>
+  api.get('/employees', groupId ? { params: { groupId } } : {});
+export const getEmployee = (id) => api.get(`/employees/${id}`);
+export const createEmployee = (data) => api.post('/employees', data);
+export const updateEmployee = (id, data) => api.put(`/employees/${id}`, data);
+export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
+export const resetEmployeePassword = (id, data) => api.post(`/employees/${id}/password-reset`, data);
+export const assignEmployeeAreas = (id, data) => api.post(`/employees/${id}/areas`, data);
+export const removeEmployeeArea = (id, areaId) => api.delete(`/employees/${id}/areas/${areaId}`);
 
 // ── Admin ────────────────────────────────────────────────────
 export const runScheduler = () => api.post('/admin/scheduler/run');

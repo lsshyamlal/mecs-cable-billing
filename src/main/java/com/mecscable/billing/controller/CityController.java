@@ -23,7 +23,11 @@ public class CityController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CityResponse>> getAllCities() {
+    public ResponseEntity<List<CityResponse>> getAllCities(
+            @RequestParam(required = false) Long companyId) {
+        if (companyId != null) {
+            return ResponseEntity.ok(cityService.getCitiesByCompany(companyId));
+        }
         return ResponseEntity.ok(cityService.getAllCities());
     }
 

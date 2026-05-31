@@ -21,13 +21,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AdminUserDetailsService adminUserDetailsService;
     private final CustomerUserDetailsService customerUserDetailsService;
+    private final EmployeeUserDetailsService employeeUserDetailsService;
 
     public JwtAuthFilter(JwtService jwtService,
                          AdminUserDetailsService adminUserDetailsService,
-                         CustomerUserDetailsService customerUserDetailsService) {
+                         CustomerUserDetailsService customerUserDetailsService,
+                         EmployeeUserDetailsService employeeUserDetailsService) {
         this.jwtService = jwtService;
         this.adminUserDetailsService = adminUserDetailsService;
         this.customerUserDetailsService = customerUserDetailsService;
+        this.employeeUserDetailsService = employeeUserDetailsService;
     }
 
     @Override
@@ -47,9 +50,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String tokenSessionId = jwtService.extractSessionId(token);
 
         if (subject != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = "ROLE_ADMIN".equals(role)
-                    ? adminUserDetailsService.loadUserByUsername(subject)
-                    : customerUserDetailsService.loadUserByUsername(subject);
+            UserDetails userDetails = switch (role) {
+                case "ROLE_ADMIN" -> adminUserDetailsService.loadUserByUsername(subject);
+                case "ROLE_EMPLOYEE" -> employeeUserDetailsService.loadUserByUsername(subject);
+                default -> customerUserDetailsService.loadUserByUsername(subject);
+            };
 
             String currentSessionId = ((UserPrincipal) userDetails).getCurrentSessionId();
             if (tokenSessionId == null || !tokenSessionId.equals(currentSessionId)) {

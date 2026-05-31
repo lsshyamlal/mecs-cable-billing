@@ -6,8 +6,10 @@ import com.mecscable.billing.dto.response.LoginResponse;
 import com.mecscable.billing.entity.Admin;
 import com.mecscable.billing.entity.Customer;
 import com.mecscable.billing.entity.CustomerStatus;
+import com.mecscable.billing.entity.Employee;
 import com.mecscable.billing.repository.AdminRepository;
 import com.mecscable.billing.repository.CustomerRepository;
+import com.mecscable.billing.repository.EmployeeRepository;
 import com.mecscable.billing.security.JwtService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +33,7 @@ public class AuthService {
 
     private final AdminRepository adminRepository;
     private final CustomerRepository customerRepository;
+    private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final ServerInstance serverInstance;
@@ -46,11 +49,13 @@ public class AuthService {
 
     public AuthService(AdminRepository adminRepository,
                        CustomerRepository customerRepository,
+                       EmployeeRepository employeeRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        ServerInstance serverInstance) {
         this.adminRepository = adminRepository;
         this.customerRepository = customerRepository;
+        this.employeeRepository = employeeRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.serverInstance = serverInstance;
@@ -66,6 +71,11 @@ public class AuthService {
                 request.identifier(), request.identifier());
         if (customerOpt.isPresent()) {
             return authenticateCustomer(customerOpt.get(), request.password(), response);
+        }
+
+        Optional<Employee> employeeOpt = employeeRepository.findByPhone(request.identifier());
+        if (employeeOpt.isPresent()) {
+            return authenticateEmployee(employeeOpt.get(), request.password(), response);
         }
 
         throw new BadCredentialsException("Invalid credentials");
@@ -121,6 +131,18 @@ public class AuthService {
                     admin.getEmail(), "ROLE_ADMIN", admin.getAdminId(), sessionId);
             addCookie(response, "access_token", newAccessToken, accessTokenExpiryMs / 1000);
             return toLoginResponse(admin);
+        }
+
+        Optional<Employee> employeeOptRefresh = employeeRepository.findByPhone(subject);
+        if (employeeOptRefresh.isPresent()) {
+            Employee employee = employeeOptRefresh.get();
+            if (sessionId == null || !sessionId.equals(employee.getCurrentSessionId())) {
+                throw new BadCredentialsException("Session has been replaced by a newer login");
+            }
+            String newAccessToken = jwtService.generateAccessToken(
+                    employee.getPhone(), "ROLE_EMPLOYEE", employee.getEmployeeId(), sessionId);
+            addCookie(response, "access_token", newAccessToken, accessTokenExpiryMs / 1000);
+            return toLoginResponse(employee);
         }
 
         Customer customer = customerRepository.findByPhone(subject)
@@ -217,6 +239,32 @@ public class AuthService {
         String name = customer.getFirstName()
                 + (customer.getLastName() != null ? " " + customer.getLastName() : "");
         return new LoginResponse("ROLE_CUSTOMER", customer.getCustomerId(), name, customer.getEmail(),
+                System.currentTimeMillis() + refreshTokenExpiryMs, serverInstance.getInstanceId());
+    }
+
+    private LoginResponse authenticateEmployee(Employee employee, String rawPassword, HttpServletResponse response) {
+        if (!passwordEncoder.matches(rawPassword, employee.getPasswordHash())) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
+        if (!employee.isActive()) {
+            throw new DisabledException("Employee account is disabled");
+        }
+        String sessionId = UUID.randomUUID().toString();
+        employee.setCurrentSessionId(sessionId);
+        employee.setLastLoginAt(OffsetDateTime.now(ZoneId.of("Asia/Kolkata")));
+        employeeRepository.save(employee);
+
+        String accessToken = jwtService.generateAccessToken(employee.getPhone(), "ROLE_EMPLOYEE", employee.getEmployeeId(), sessionId);
+        String refreshToken = jwtService.generateRefreshToken(employee.getPhone(), sessionId);
+        addCookie(response, "access_token", accessToken, accessTokenExpiryMs / 1000);
+        addCookie(response, "refresh_token", refreshToken, refreshTokenExpiryMs / 1000);
+        return toLoginResponse(employee);
+    }
+
+    private LoginResponse toLoginResponse(Employee employee) {
+        String name = employee.getFirstName()
+                + (employee.getLastName() != null ? " " + employee.getLastName() : "");
+        return new LoginResponse("ROLE_EMPLOYEE", employee.getEmployeeId(), name, employee.getEmail(),
                 System.currentTimeMillis() + refreshTokenExpiryMs, serverInstance.getInstanceId());
     }
 }

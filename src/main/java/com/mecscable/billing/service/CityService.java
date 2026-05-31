@@ -3,9 +3,11 @@ package com.mecscable.billing.service;
 import com.mecscable.billing.dto.request.CreateCityRequest;
 import com.mecscable.billing.dto.response.CityResponse;
 import com.mecscable.billing.entity.City;
+import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.AreaRepository;
 import com.mecscable.billing.repository.CityRepository;
+import com.mecscable.billing.repository.CompanyRepository;
 import com.mecscable.billing.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,22 +21,34 @@ public class CityService {
     private final CityRepository cityRepository;
     private final AreaRepository areaRepository;
     private final CustomerRepository customerRepository;
+    private final CompanyRepository companyRepository;
     private final AuditService auditService;
 
     public CityService(CityRepository cityRepository,
                        AreaRepository areaRepository,
                        CustomerRepository customerRepository,
+                       CompanyRepository companyRepository,
                        AuditService auditService) {
         this.cityRepository = cityRepository;
         this.areaRepository = areaRepository;
         this.customerRepository = customerRepository;
+        this.companyRepository = companyRepository;
         this.auditService = auditService;
     }
 
     public List<CityResponse> getAllCities() {
         return cityRepository.findAllByOrderByCityNameAsc()
                 .stream()
-                .map(c -> new CityResponse(c.getCityId(), c.getCityName()))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public List<CityResponse> getCitiesByCompany(Long companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + companyId));
+        return cityRepository.findByCompanyOrderByCityNameAsc(company)
+                .stream()
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -46,9 +60,14 @@ public class CityService {
         }
         City city = new City();
         city.setCityName(name);
+        if (request.companyId() != null) {
+            Company company = companyRepository.findById(request.companyId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + request.companyId()));
+            city.setCompany(company);
+        }
         city = cityRepository.save(city);
         auditService.log(adminId, "CREATE_CITY", "City", city.getCityId(), null);
-        return new CityResponse(city.getCityId(), city.getCityName());
+        return toResponse(city);
     }
 
     @Transactional
@@ -60,9 +79,14 @@ public class CityService {
             throw new IllegalArgumentException("City already exists: " + name);
         }
         city.setCityName(name);
+        if (request.companyId() != null) {
+            Company company = companyRepository.findById(request.companyId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + request.companyId()));
+            city.setCompany(company);
+        }
         city = cityRepository.save(city);
         auditService.log(adminId, "UPDATE_CITY", "City", city.getCityId(), null);
-        return new CityResponse(city.getCityId(), city.getCityName());
+        return toResponse(city);
     }
 
     @Transactional
@@ -85,5 +109,15 @@ public class CityService {
     private City findCity(Long id) {
         return cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found: " + id));
+    }
+
+    private CityResponse toResponse(City city) {
+        Company company = city.getCompany();
+        return new CityResponse(
+                city.getCityId(),
+                city.getCityName(),
+                company != null ? company.getCompanyId() : null,
+                company != null ? company.getCompanyName() : null
+        );
     }
 }
