@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Reminder: a git commit or push just ran. Update README.md to reflect the change (add a timestamped changelog entry per project convention).\"}}'",
+            "if": "Bash(git commit*)"
+          },
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Reminder: a git push just ran. Update README.md to reflect the change (add a timestamped changelog entry per project convention).\"}}'",
+            "if": "Bash(git push*)"
+          }
+        ]
+      }
+    ]
+  }
+}
