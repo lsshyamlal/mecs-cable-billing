@@ -144,3 +144,4 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-30 21:47` — Chore: add Claude Code project hooks for README changelog reminders
 - `2026-05-31 18:10` — Feat: add organisation hierarchy — Company → City → Group → Employee → Area, with employee portal (ROLE_EMPLOYEE), area-based access control, and admin drill-down UI
 - `2026-05-31 11:45` — Feat: add cascading hierarchy filter (Company → City → Group → Employee → Area) to admin dashboard so status sections can be scoped without leaving the page; default view shows all customers
+- `2026-05-31 15:39` — Feat: extend Customers page filter bar with Company / Group / Employee dropdowns alongside existing City / Area / Street so the customer list supports the same hierarchy as the dashboard

@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
-import { listCustomers, getCities, getAreas, getStreets } from '../../api';
+import {
+  listCustomers,
+  getCities,
+  getAreas,
+  getStreets,
+  getCompanies,
+  getGroups,
+  getEmployees,
+} from '../../api';
 import { StatusBadge, fmtDate, fmtCurrency } from '../../utils';
 
 export default function Customers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState(null);
+  const [companies, setCompanies] = useState([]);
   const [cities, setCities] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [areas, setAreas] = useState([]);
   const [streets, setStreets] = useState([]);
   const [search, setSearch] = useState('');
@@ -16,16 +27,24 @@ export default function Customers() {
 
   const statusFilter = searchParams.get('status') || '';
   const futureStatusFilter = searchParams.get('futureStatus') || '';
+  const companyFilter = searchParams.get('companyId') || '';
   const cityFilter = searchParams.get('cityId') || '';
+  const groupFilter = searchParams.get('groupId') || '';
+  const employeeFilter = searchParams.get('employeeId') || '';
   const areaFilter = searchParams.get('areaId') || '';
   const streetFilter = searchParams.get('streetId') || '';
 
   useEffect(() => {
+    getCompanies().then((r) => setCompanies(r.data)).catch(() => {});
     getCities().then((r) => setCities(r.data)).catch(() => {});
+    getGroups().then((r) => setGroups(r.data)).catch(() => {});
+    getEmployees().then((r) => setEmployees(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
     getStreets().then((r) => setStreets(r.data)).catch(() => {});
   }, []);
 
+  // The /customers API only accepts city/area/street server-side; company/group/
+  // employee are applied client-side after fetch (same shape as Dashboard).
   useEffect(() => {
     setCustomers(null);
     const params = {};
@@ -39,20 +58,87 @@ export default function Customers() {
       .catch(() => setError('Failed to load customers.'));
   }, [statusFilter, futureStatusFilter, cityFilter, areaFilter, streetFilter]);
 
-  const filteredAreas = cityFilter
-    ? areas.filter((a) => String(a.cityId) === cityFilter)
-    : areas;
-  const filteredStreets = areaFilter
-    ? streets.filter((s) => String(s.areaId) === areaFilter)
-    : cityFilter
-      ? streets.filter((s) => String(s.cityId) === cityFilter)
-      : streets;
+  // Cascading dropdown options
+  const filteredCities = useMemo(
+    () => (companyFilter ? cities.filter((c) => String(c.companyId) === companyFilter) : cities),
+    [cities, companyFilter]
+  );
 
+  const filteredGroups = useMemo(() => {
+    let g = groups;
+    if (companyFilter) g = g.filter((x) => String(x.companyId) === companyFilter);
+    if (cityFilter) g = g.filter((x) => String(x.cityId) === cityFilter);
+    return g;
+  }, [groups, companyFilter, cityFilter]);
+
+  const filteredEmployees = useMemo(() => {
+    let emp = employees;
+    if (companyFilter) emp = emp.filter((x) => String(x.companyId) === companyFilter);
+    if (groupFilter) {
+      emp = emp.filter((x) => String(x.groupId) === groupFilter);
+    } else if (cityFilter) {
+      const groupsInCity = new Set(
+        groups.filter((g) => String(g.cityId) === cityFilter).map((g) => g.groupId)
+      );
+      emp = emp.filter((x) => groupsInCity.has(x.groupId));
+    }
+    return emp;
+  }, [employees, groups, companyFilter, cityFilter, groupFilter]);
+
+  const filteredAreas = useMemo(() => {
+    if (employeeFilter) {
+      const emp = employees.find((e) => String(e.employeeId) === employeeFilter);
+      const assigned = new Set((emp?.assignedAreas || []).map((aa) => aa.areaId));
+      return areas.filter((x) => assigned.has(x.areaId));
+    }
+    let a = areas;
+    if (groupFilter) {
+      const empsInGroup = employees.filter((e) => String(e.groupId) === groupFilter);
+      const assigned = new Set(empsInGroup.flatMap((e) => (e.assignedAreas || []).map((aa) => aa.areaId)));
+      a = a.filter((x) => assigned.has(x.areaId));
+    }
+    if (cityFilter) {
+      a = a.filter((x) => String(x.cityId) === cityFilter);
+    } else if (companyFilter) {
+      const cityIdsInCo = new Set(
+        cities.filter((c) => String(c.companyId) === companyFilter).map((c) => c.cityId)
+      );
+      a = a.filter((x) => cityIdsInCo.has(x.cityId));
+    }
+    return a;
+  }, [areas, cities, employees, companyFilter, cityFilter, groupFilter, employeeFilter]);
+
+  const filteredStreets = useMemo(() => {
+    if (areaFilter) return streets.filter((s) => String(s.areaId) === areaFilter);
+    const allowedAreaIds = new Set(filteredAreas.map((a) => a.areaId));
+    return streets.filter((s) => allowedAreaIds.has(s.areaId));
+  }, [streets, filteredAreas, areaFilter]);
+
+  // Cascading reset on every level change (URL-driven).
+  const setCompany = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('companyId', val); else next.delete('companyId');
+    next.delete('cityId'); next.delete('groupId'); next.delete('employeeId');
+    next.delete('areaId'); next.delete('streetId');
+    setSearchParams(next);
+  };
   const setCity = (val) => {
     const next = new URLSearchParams(searchParams);
     if (val) next.set('cityId', val); else next.delete('cityId');
-    next.delete('areaId');
-    next.delete('streetId');
+    next.delete('groupId'); next.delete('employeeId');
+    next.delete('areaId'); next.delete('streetId');
+    setSearchParams(next);
+  };
+  const setGroup = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('groupId', val); else next.delete('groupId');
+    next.delete('employeeId'); next.delete('areaId'); next.delete('streetId');
+    setSearchParams(next);
+  };
+  const setEmployee = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('employeeId', val); else next.delete('employeeId');
+    next.delete('areaId'); next.delete('streetId');
     setSearchParams(next);
   };
   const setArea = (val) => {
@@ -67,8 +153,29 @@ export default function Customers() {
     setSearchParams(next);
   };
 
+  // Client-side hierarchy filter (company / group / employee — none server-side).
+  const hierarchyMatches = (c) => {
+    if (employeeFilter) {
+      const emp = employees.find((e) => String(e.employeeId) === employeeFilter);
+      const assigned = new Set((emp?.assignedAreas || []).map((aa) => aa.areaId));
+      return assigned.has(c.areaId);
+    }
+    if (groupFilter) {
+      const empsInGroup = employees.filter((e) => String(e.groupId) === groupFilter);
+      const assigned = new Set(empsInGroup.flatMap((e) => (e.assignedAreas || []).map((aa) => aa.areaId)));
+      return assigned.has(c.areaId);
+    }
+    if (companyFilter) {
+      const cityIdsInCo = new Set(
+        cities.filter((ct) => String(ct.companyId) === companyFilter).map((ct) => ct.cityId)
+      );
+      return cityIdsInCo.has(c.cityId);
+    }
+    return true;
+  };
+
   const displayed = customers
-    ? customers.filter((c) => {
+    ? customers.filter(hierarchyMatches).filter((c) => {
         if (!search) return true;
         const q = search.toLowerCase();
         return (
@@ -81,6 +188,10 @@ export default function Customers() {
     : [];
 
   const inputCls = 'border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-400';
+
+  const anyFilter =
+    statusFilter || futureStatusFilter || companyFilter || cityFilter ||
+    groupFilter || employeeFilter || areaFilter || streetFilter || search;
 
   return (
     <AdminLayout>
@@ -133,13 +244,45 @@ export default function Customers() {
           </optgroup>
         </select>
         <select
+          value={companyFilter}
+          onChange={(e) => setCompany(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">All Companies</option>
+          {companies.map((c) => (
+            <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
+          ))}
+        </select>
+        <select
           value={cityFilter}
           onChange={(e) => setCity(e.target.value)}
           className={inputCls}
         >
           <option value="">All Cities</option>
-          {cities.map((c) => (
+          {filteredCities.map((c) => (
             <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
+          ))}
+        </select>
+        <select
+          value={groupFilter}
+          onChange={(e) => setGroup(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">All Groups</option>
+          {filteredGroups.map((g) => (
+            <option key={g.groupId} value={g.groupId}>{g.groupName}</option>
+          ))}
+        </select>
+        <select
+          value={employeeFilter}
+          onChange={(e) => setEmployee(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">All Employees</option>
+          {filteredEmployees.map((e) => (
+            <option key={e.employeeId} value={e.employeeId}>
+              {e.firstName}{e.lastName ? ' ' + e.lastName : ''}
+            </option>
           ))}
         </select>
         <select
@@ -162,7 +305,7 @@ export default function Customers() {
             <option key={s.streetId} value={s.streetId}>{s.streetName}</option>
           ))}
         </select>
-        {(statusFilter || futureStatusFilter || cityFilter || areaFilter || streetFilter || search) && (
+        {anyFilter && (
           <button
             onClick={() => { setSearch(''); setSearchParams({}); }}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
