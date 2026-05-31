@@ -191,13 +191,16 @@ export default function Dashboard() {
   const hasFilter = Boolean(companyId || cityId || groupId || employeeId || areaId);
 
   // Build the click-through URL for a status card so the filter survives navigation.
-  // The /admin/customers page only supports cityId / areaId server-side filters, so
-  // higher levels (company / group / employee) are dropped on navigation.
+  // The Customers page reads each hierarchy level from the URL — company/group/
+  // employee are applied client-side there, the rest server-side.
   const navUrl = (statusParam, key) => {
     const p = new URLSearchParams();
     p.set(statusParam, key);
+    if (companyId) p.set('companyId', companyId);
+    if (cityId) p.set('cityId', cityId);
+    if (groupId) p.set('groupId', groupId);
+    if (employeeId) p.set('employeeId', employeeId);
     if (areaId) p.set('areaId', areaId);
-    else if (cityId) p.set('cityId', cityId);
     return `/admin/customers?${p}`;
   };
 
