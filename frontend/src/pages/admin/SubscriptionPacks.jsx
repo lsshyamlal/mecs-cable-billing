@@ -101,7 +101,7 @@ export default function SubscriptionPacks() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Subscription Packs</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Manage Plans</h1>
 
       {/* Existing packs */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-6">

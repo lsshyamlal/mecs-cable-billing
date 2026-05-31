@@ -691,7 +691,7 @@ export default function CustomerAddress() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Customer Address</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Manage Address</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Manage the cities, areas, and streets that customers can be assigned to.</p>
 
       <SuccessMsg msg={flash} />

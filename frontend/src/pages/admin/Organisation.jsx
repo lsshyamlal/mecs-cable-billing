@@ -6,6 +6,7 @@ import {
   getCities, createCity, updateCity, deleteCity,
   getGroups, createGroup, updateGroup, deleteGroup,
   getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee,
+  resetEmployeePassword,
   getAreas, assignEmployeeAreas, removeEmployeeArea,
 } from '../../api';
 
@@ -484,6 +485,7 @@ function EmployeesPanel({ group, onDrillInto, setFlash }) {
   const [error, setError] = useState('');
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [resetPwTarget, setResetPwTarget] = useState(null);
 
   const reload = () => getEmployees(group.groupId).then((r) => setItems(r.data)).catch(() => setItems([]));
   useEffect(() => { reload(); }, [group.groupId]);
@@ -537,6 +539,7 @@ function EmployeesPanel({ group, onDrillInto, setFlash }) {
                 </td>
                 <td className="px-6 py-3 text-right">
                   <button onClick={() => setEditTarget(emp)} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition mr-3">Edit</button>
+                  <button onClick={() => setResetPwTarget(emp)} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition mr-3">Reset Password</button>
                   <button onClick={() => setDeleteTarget(emp)} className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition">Delete</button>
                 </td>
               </tr>
@@ -583,6 +586,13 @@ function EmployeesPanel({ group, onDrillInto, setFlash }) {
             onClose={() => setEditTarget(null)} />
         </Modal>
       )}
+      {resetPwTarget && (
+        <Modal title={`Reset Password — ${resetPwTarget.firstName}${resetPwTarget.lastName ? ' ' + resetPwTarget.lastName : ''}`} onClose={() => setResetPwTarget(null)}>
+          <ResetEmployeePasswordForm employeeId={resetPwTarget.employeeId}
+            onSuccess={() => { const name = `${resetPwTarget.firstName}${resetPwTarget.lastName ? ' ' + resetPwTarget.lastName : ''}`; setResetPwTarget(null); setFlash(`Password reset for "${name}".`); }}
+            onClose={() => setResetPwTarget(null)} />
+        </Modal>
+      )}
       {deleteTarget && (
         <DeleteModal title="Delete Employee"
           message={`Delete employee "${deleteTarget.firstName}${deleteTarget.lastName ? ' ' + deleteTarget.lastName : ''}"? This cannot be undone.`}
@@ -595,13 +605,14 @@ function EmployeesPanel({ group, onDrillInto, setFlash }) {
 }
 
 function EditEmployeeForm({ employee, onSuccess, onClose }) {
-  const [form, setForm] = useState({ firstName: employee.firstName, lastName: employee.lastName || '', email: employee.email || '', active: employee.active });
+  const [form, setForm] = useState({ firstName: employee.firstName, lastName: employee.lastName || '', phone: employee.phone || '', email: employee.email || '', active: employee.active });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const phoneChanged = form.phone.trim() !== (employee.phone || '');
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await updateEmployee(employee.employeeId, { firstName: form.firstName.trim(), lastName: form.lastName.trim() || null, email: form.email.trim() || null, active: form.active });
+      await updateEmployee(employee.employeeId, { firstName: form.firstName.trim(), lastName: form.lastName.trim() || null, phone: form.phone.trim(), email: form.email.trim() || null, active: form.active });
       onSuccess(form.firstName.trim());
     } catch (err) { setError(extractErr(err, 'Failed to update.')); }
     finally { setLoading(false); }
@@ -613,11 +624,13 @@ function EditEmployeeForm({ employee, onSuccess, onClose }) {
         {[
           { key: 'firstName', label: 'First Name', required: true },
           { key: 'lastName', label: 'Last Name' },
+          { key: 'phone', label: 'Phone (login ID)', required: true, hint: phoneChanged ? 'Changing the phone signs the employee out of any active session.' : null },
           { key: 'email', label: 'Email' },
-        ].map(({ key, label, required }) => (
+        ].map(({ key, label, required, hint }) => (
           <div key={key}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
             <input value={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))} required={required} className={INPUT} />
+            {hint && <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{hint}</p>}
           </div>
         ))}
         <div className="flex items-center gap-2">
@@ -633,6 +646,43 @@ function EditEmployeeForm({ employee, onSuccess, onClose }) {
   );
 }
 
+function ResetEmployeePasswordForm({ employeeId, onSuccess, onClose }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirm) { setError('Passwords do not match.'); return; }
+    setLoading(true); setError('');
+    try {
+      await resetEmployeePassword(employeeId, { newPassword });
+      onSuccess();
+    } catch (err) { setError(extractErr(err, 'Failed to reset password.')); }
+    finally { setLoading(false); }
+  };
+  return (
+    <>
+      <ErrorMsg msg={error} />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400">Resets the employee's login password and signs them out of any active session.</p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password<span className="text-red-500 ml-0.5">*</span></label>
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} className={INPUT} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password<span className="text-red-500 ml-0.5">*</span></label>
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} className={INPUT} />
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="text-sm font-medium text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 transition">Cancel</button>
+          <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">{loading ? 'Saving…' : 'Reset Password'}</button>
+        </div>
+      </form>
+    </>
+  );
+}
+
 // ── Employee detail panel ─────────────────────────────────────
 function EmployeeDetailPanel({ employeeId, group, setFlash }) {
   const [emp, setEmp] = useState(null);
@@ -641,6 +691,7 @@ function EmployeeDetailPanel({ employeeId, group, setFlash }) {
   const [assignModal, setAssignModal] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [editModal, setEditModal] = useState(false);
+  const [resetPwModal, setResetPwModal] = useState(false);
 
   const reload = () => getEmployee(employeeId).then((r) => setEmp(r.data)).catch(() => {});
   useEffect(() => {
@@ -674,6 +725,10 @@ function EmployeeDetailPanel({ employeeId, group, setFlash }) {
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${emp.active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
               {emp.active ? 'Active' : 'Inactive'}
             </span>
+            <button onClick={() => setResetPwModal(true)}
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-700 px-3 py-1.5 rounded-lg transition">
+              Reset Password
+            </button>
             <button onClick={() => setEditModal(true)}
               className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-700 px-3 py-1.5 rounded-lg transition">
               Edit
@@ -729,6 +784,15 @@ function EmployeeDetailPanel({ employeeId, group, setFlash }) {
           <EditEmployeeForm employee={emp}
             onSuccess={(name) => { setEditModal(false); setFlash(`Employee "${name}" updated.`); reload(); }}
             onClose={() => setEditModal(false)} />
+        </Modal>
+      )}
+
+      {/* Reset password modal */}
+      {resetPwModal && (
+        <Modal title={`Reset Password — ${fullName}`} onClose={() => setResetPwModal(false)}>
+          <ResetEmployeePasswordForm employeeId={emp.employeeId}
+            onSuccess={() => { setResetPwModal(false); setFlash(`Password reset for "${fullName}".`); }}
+            onClose={() => setResetPwModal(false)} />
         </Modal>
       )}
 
@@ -826,7 +890,7 @@ export default function Organisation() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Organisation</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Manage Organisation</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Manage companies, cities, groups, employees, and their area assignments.</p>
 
       <SuccessMsg msg={flash} />

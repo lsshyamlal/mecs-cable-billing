@@ -85,6 +85,15 @@ public class EmployeeService {
     @Transactional
     public EmployeeResponse updateEmployee(Long id, UpdateEmployeeRequest request, Long adminId) {
         Employee employee = findEmployee(id);
+        String newPhone = request.phone().trim();
+        if (!newPhone.equals(employee.getPhone())) {
+            if (employeeRepository.existsByPhone(newPhone)) {
+                throw new IllegalArgumentException("Phone already registered: " + newPhone);
+            }
+            employee.setPhone(newPhone);
+            // Phone is the login identifier; existing sessions/tokens are bound to the old phone.
+            employee.setCurrentSessionId(null);
+        }
         employee.setFirstName(request.firstName());
         employee.setLastName(request.lastName());
         employee.setEmail(request.email());

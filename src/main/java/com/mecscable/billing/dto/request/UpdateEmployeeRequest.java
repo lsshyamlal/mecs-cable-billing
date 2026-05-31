@@ -8,6 +8,10 @@ public record UpdateEmployeeRequest(
         String firstName,
 
         String lastName,
+
+        @NotBlank(message = "Phone is required")
+        String phone,
+
         String email,
 
         @NotNull(message = "Active flag is required")
