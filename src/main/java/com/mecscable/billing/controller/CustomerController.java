@@ -2,6 +2,7 @@ package com.mecscable.billing.controller;
 
 import com.mecscable.billing.dto.request.CloseAccountRequest;
 import com.mecscable.billing.dto.request.CreateCustomerRequest;
+import com.mecscable.billing.dto.request.DeactivateSubscriptionRequest;
 import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.ResetPasswordRequest;
 import com.mecscable.billing.dto.request.UpdateCustomerRequest;
@@ -70,6 +71,16 @@ public class CustomerController {
             @AuthenticationPrincipal UserPrincipal principal) {
         customerService.closeAccount(id, request.paymentCollected(), request.notes(), principal.getUserId());
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/subscriptions/{subscriptionId}/deactivate")
+    public ResponseEntity<CustomerResponse> deactivateSubscription(
+            @PathVariable Long id,
+            @PathVariable Long subscriptionId,
+            @RequestBody DeactivateSubscriptionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        customerService.deactivateSubscription(id, subscriptionId, request, principal.getUserId());
+        return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
     @PutMapping("/{id}/reenroll")

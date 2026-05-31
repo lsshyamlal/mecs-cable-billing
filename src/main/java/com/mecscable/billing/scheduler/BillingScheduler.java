@@ -5,6 +5,7 @@ import com.mecscable.billing.entity.*;
 import com.mecscable.billing.repository.CustomerRepository;
 import com.mecscable.billing.repository.SubscriptionRepository;
 import com.mecscable.billing.service.AuditService;
+import com.mecscable.billing.service.CustomerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,13 +26,16 @@ public class BillingScheduler {
     private final SubscriptionRepository subscriptionRepository;
     private final CustomerRepository customerRepository;
     private final AuditService auditService;
+    private final CustomerService customerService;
 
     public BillingScheduler(SubscriptionRepository subscriptionRepository,
                             CustomerRepository customerRepository,
-                            AuditService auditService) {
+                            AuditService auditService,
+                            CustomerService customerService) {
         this.subscriptionRepository = subscriptionRepository;
         this.customerRepository = customerRepository;
         this.auditService = auditService;
+        this.customerService = customerService;
     }
 
     // Runs daily at 3:00 AM IST
@@ -43,10 +47,28 @@ public class BillingScheduler {
 
         int graceCount = moveActiveToGrace(today);
         int pendingCount = moveGraceToPaymentPending(today);
+        int deactivatedCount = applyScheduledDeactivations(today);
 
-        log.info("Billing scheduler complete: {} moved to GRACE, {} moved to PAYMENT_PENDING",
-                graceCount, pendingCount);
-        return new SchedulerResultResponse(graceCount, pendingCount);
+        log.info("Billing scheduler complete: {} moved to GRACE, {} moved to PAYMENT_PENDING, {} deactivated",
+                graceCount, pendingCount, deactivatedCount);
+        return new SchedulerResultResponse(graceCount, pendingCount, deactivatedCount);
+    }
+
+    private int applyScheduledDeactivations(LocalDate today) {
+        List<Subscription> due = subscriptionRepository
+                .findByDeactivationDateLessThanEqualAndStatusNotIn(
+                        today,
+                        List.of(SubscriptionStatus.SUSPENDED, SubscriptionStatus.CANCELLED));
+        for (Subscription sub : due) {
+            sub.setStatus(SubscriptionStatus.SUSPENDED);
+            subscriptionRepository.save(sub);
+            customerService.recalcCustomerStatusAfterSubscriptionChange(sub.getCustomer(), null);
+            auditService.logSystem("DEACTIVATE_SUBSCRIPTION", "Subscription",
+                    sub.getSubscriptionId(), null);
+            log.debug("Subscription {} deactivated (date {})",
+                    sub.getSubscriptionId(), sub.getDeactivationDate());
+        }
+        return due.size();
     }
 
     private int moveActiveToGrace(LocalDate today) {

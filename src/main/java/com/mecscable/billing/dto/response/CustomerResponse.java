@@ -32,5 +32,9 @@ public record CustomerResponse(
         OffsetDateTime accountCreatedAt,
         String futureSubscriptionStatus,
         Long currentPackId,
-        String currentPackName
+        String currentPackName,
+        Long currentSubscriptionId,
+        LocalDate currentSubscriptionDeactivationDate,
+        Long futureSubscriptionId,
+        LocalDate futureSubscriptionDeactivationDate
 ) {}

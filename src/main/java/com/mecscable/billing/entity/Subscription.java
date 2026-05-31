@@ -55,4 +55,17 @@ public class Subscription {
 
     @Column(name = "notes")
     private String notes;
+
+    @Column(name = "deactivation_date")
+    private LocalDate deactivationDate;
+
+    @Column(name = "deactivation_notes")
+    private String deactivationNotes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deactivated_by")
+    private Admin deactivatedBy;
+
+    @Column(name = "deactivation_recorded_at")
+    private OffsetDateTime deactivationRecordedAt;
 }

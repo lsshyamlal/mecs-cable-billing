@@ -1,6 +1,7 @@
 package com.mecscable.billing.service;
 
 import com.mecscable.billing.dto.request.CreateCustomerRequest;
+import com.mecscable.billing.dto.request.DeactivateSubscriptionRequest;
 import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.UpdateCustomerRequest;
 import com.mecscable.billing.dto.response.CustomerResponse;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -230,6 +232,134 @@ public class CustomerService {
     }
 
     @Transactional
+    public void deactivateSubscription(Long customerId, Long subscriptionId,
+                                       DeactivateSubscriptionRequest request, Long adminId) {
+        if (request.notes() == null || request.notes().isBlank()) {
+            throw new IllegalArgumentException("Notes are required when deactivating a subscription");
+        }
+        Customer customer = findCustomer(customerId);
+        Subscription sub = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + subscriptionId));
+        if (!sub.getCustomer().getCustomerId().equals(customerId)) {
+            throw new IllegalArgumentException("Subscription does not belong to this customer");
+        }
+        if (sub.getStatus() == SubscriptionStatus.SUSPENDED || sub.getStatus() == SubscriptionStatus.CANCELLED) {
+            throw new IllegalArgumentException("Subscription is already " + sub.getStatus().name().toLowerCase());
+        }
+        if (sub.getDeactivationDate() != null) {
+            throw new IllegalArgumentException("Subscription already has a pending deactivation on " + sub.getDeactivationDate());
+        }
+
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
+        OffsetDateTime nowIst = OffsetDateTime.now(IST);
+        LocalDate today = LocalDate.now(IST);
+
+        sub.setDeactivationNotes(request.notes().trim());
+        sub.setDeactivatedBy(admin);
+        sub.setDeactivationRecordedAt(nowIst);
+
+        boolean hasOutstanding = sub.getStatus() == SubscriptionStatus.GRACE
+                || sub.getStatus() == SubscriptionStatus.PAYMENT_PENDING;
+
+        if (sub.getStatus() == SubscriptionStatus.SCHEDULED) {
+            // Future subscription: cancel immediately. No payment was due.
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+        } else {
+            // Current subscription: requires a future-dated deactivation within the billing period.
+            LocalDate deactivationDate = request.deactivationDate();
+            if (deactivationDate == null) {
+                throw new IllegalArgumentException("Deactivation date is required for a current subscription");
+            }
+            if (deactivationDate.isBefore(today)) {
+                throw new IllegalArgumentException("Deactivation date cannot be in the past");
+            }
+            if (deactivationDate.isAfter(sub.getEndDate())) {
+                throw new IllegalArgumentException("Deactivation date cannot be after the subscription end date (" + sub.getEndDate() + ")");
+            }
+            if (hasOutstanding && request.paymentCollected() == null) {
+                throw new IllegalArgumentException(
+                        "paymentCollected is required when deactivating a subscription with outstanding dues");
+            }
+            sub.setDeactivationDate(deactivationDate);
+        }
+        subscriptionRepository.save(sub);
+
+        if (hasOutstanding) {
+            BigDecimal amount = sub.getMonthlyRate() != null
+                    ? sub.getMonthlyRate()
+                    : customer.getCurrentPaymentAmount();
+            if (Boolean.TRUE.equals(request.paymentCollected())) {
+                recordOutstandingPayment(customer, sub, admin, amount, request.notes().trim(), adminId);
+            } else {
+                auditService.log(adminId, "WRITEOFF_SUBSCRIPTION", "Subscription", subscriptionId,
+                        "{\"amount\":" + (amount != null ? amount : "null")
+                                + ",\"reason\":\"" + escapeJson(request.notes().trim()) + "\"}");
+            }
+        }
+
+        recalcCustomerStatusAfterSubscriptionChange(customer, adminId);
+        auditService.log(adminId, "DEACTIVATE_SUBSCRIPTION", "Subscription", subscriptionId, request.notes());
+    }
+
+    private void recordOutstandingPayment(Customer customer, Subscription sub, Admin admin,
+                                          BigDecimal amount, String notes, Long adminId) {
+        if (amount == null) {
+            throw new IllegalArgumentException("Cannot record payment: subscription has no monthly rate");
+        }
+        OffsetDateTime payDate = OffsetDateTime.now(IST);
+        Payment payment = new Payment();
+        payment.setCustomer(customer);
+        payment.setSubscription(sub);
+        payment.setAmount(amount);
+        payment.setPaymentDate(payDate);
+        payment.setRecordedBy(admin);
+        payment.setNotes("Collected on subscription deactivation: " + notes);
+        payment.setPack(sub.getPack());
+        payment = paymentRepository.save(payment);
+
+        sub.setStatus(SubscriptionStatus.PAID);
+        subscriptionRepository.save(sub);
+
+        customer.setLastPaymentAmount(amount);
+        customer.setLastPaymentDate(payDate.atZoneSameInstant(IST).toLocalDate());
+        customer.setCurrentPaymentAmount(amount);
+        customerRepository.save(customer);
+
+        auditService.log(adminId, "RECORD_PAYMENT", "Payment", payment.getPaymentId(),
+                "{\"amount\":" + amount + ",\"subscriptionId\":" + sub.getSubscriptionId()
+                        + ",\"context\":\"deactivation\"}");
+    }
+
+    private static String escapeJson(String s) {
+        return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+     * Recalculates the customer-level status after a subscription transition.
+     * If no non-terminal subscriptions remain, flips an ACTIVE customer to SUSPENDED.
+     * Pass adminId = null when invoked by the scheduler.
+     */
+    @Transactional
+    public void recalcCustomerStatusAfterSubscriptionChange(Customer customer, Long adminId) {
+        if (customer.getStatus() != CustomerStatus.ACTIVE) return;
+
+        boolean hasRemaining = !subscriptionRepository
+                .findByCustomerAndStatusInOrderByStartDateDesc(customer,
+                        List.of(SubscriptionStatus.SCHEDULED, SubscriptionStatus.GRACE,
+                                SubscriptionStatus.PAYMENT_PENDING, SubscriptionStatus.PAID))
+                .isEmpty();
+
+        if (hasRemaining) return;
+
+        customer.setStatus(CustomerStatus.SUSPENDED);
+        customer.setSuspendedAt(OffsetDateTime.now(IST));
+        customerRepository.save(customer);
+        saveStatusEvent(customer, CustomerStatus.ACTIVE, CustomerStatus.SUSPENDED, adminId,
+                "Auto-suspended: no active subscriptions remaining");
+    }
+
+    @Transactional
     public CustomerResponse reEnrollCustomer(Long customerId, EnrollmentRequest request, Long adminId) {
         Customer customer = findCustomer(customerId);
         if (customer.getStatus() != CustomerStatus.SUSPENDED && customer.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
@@ -368,6 +498,8 @@ public class CustomerService {
         LocalDate gracePeriodDeadline = null;
         Long currentPackId = null;
         String currentPackName = null;
+        Long currentSubscriptionId = null;
+        LocalDate currentSubscriptionDeactivationDate = null;
         if (c.getCurrentSubscriptionStart() != null) {
             var currentSub = subscriptionRepository.findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, c.getCurrentSubscriptionStart());
             subscriptionStatus = c.getStatus() == CustomerStatus.SUSPENDED
@@ -375,6 +507,8 @@ public class CustomerService {
                     : currentSub.map(s -> s.getStatus().name()).orElse(null);
             currentPackId = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackId() : null).orElse(null);
             currentPackName = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackName() : null).orElse(null);
+            currentSubscriptionId = currentSub.map(Subscription::getSubscriptionId).orElse(null);
+            currentSubscriptionDeactivationDate = currentSub.map(Subscription::getDeactivationDate).orElse(null);
             if (c.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
                 int gracePeriodDay = c.getArea().getGracePeriodDay();
                 LocalDate rawDeadline = YearMonth.from(c.getCurrentSubscriptionStart()).atDay(gracePeriodDay);
@@ -383,12 +517,15 @@ public class CustomerService {
             }
         }
         String futureSubscriptionStatus = null;
+        Long futureSubscriptionId = null;
+        LocalDate futureSubscriptionDeactivationDate = null;
         if (c.getCurrentSubscriptionEnd() != null) {
             LocalDate futureStart = c.getCurrentSubscriptionEnd().plusDays(1);
-            futureSubscriptionStatus = subscriptionRepository
-                    .findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, futureStart)
-                    .map(s -> s.getStatus().name())
-                    .orElse(null);
+            var futureSub = subscriptionRepository
+                    .findFirstByCustomerAndStartDateOrderBySubscriptionIdDesc(c, futureStart);
+            futureSubscriptionStatus = futureSub.map(s -> s.getStatus().name()).orElse(null);
+            futureSubscriptionId = futureSub.map(Subscription::getSubscriptionId).orElse(null);
+            futureSubscriptionDeactivationDate = futureSub.map(Subscription::getDeactivationDate).orElse(null);
         }
         Street street = c.getStreet();
         Area area = c.getArea();
@@ -421,7 +558,11 @@ public class CustomerService {
                 c.getAccountCreatedAt(),
                 futureSubscriptionStatus,
                 currentPackId,
-                currentPackName
+                currentPackName,
+                currentSubscriptionId,
+                currentSubscriptionDeactivationDate,
+                futureSubscriptionId,
+                futureSubscriptionDeactivationDate
         );
     }
 }

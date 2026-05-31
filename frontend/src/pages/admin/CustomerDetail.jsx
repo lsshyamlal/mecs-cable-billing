@@ -5,7 +5,7 @@ import {
   getCustomer, getCities, getAreas, getStreets, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer, getSubscriptionPacks,
-  getCustomerStatusHistory,
+  getCustomerStatusHistory, deactivateSubscription,
 } from '../../api';
 import { StatusBadge, CustomerStatusBadge, fmtDate, fmtDateTime, fmtCurrency } from '../../utils';
 
@@ -440,6 +440,120 @@ function EditCustomerModal({ customer, cities, areas, streets, onClose, onSucces
 
 const AUTO_NOTES = { true: 'Payment collected', false: 'Closed without payment' };
 
+// ── Deactivate Subscription Modal ─────────────────────────────
+function DeactivateSubscriptionModal({ customerId, subscriptionId, isFuture, endDate, subscriptionStatus, onClose, onSuccess }) {
+  const todayIST = new Date()
+    .toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' })
+    .substring(0, 10);
+  const hasOutstanding = !isFuture
+    && (subscriptionStatus === 'GRACE' || subscriptionStatus === 'PAYMENT_PENDING');
+  const [deactivationDate, setDeactivationDate] = useState(isFuture ? '' : (endDate || todayIST));
+  const [notes, setNotes] = useState('');
+  const [paymentCollected, setPaymentCollected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const trimmedNotes = notes.trim();
+  const canSubmit = trimmedNotes.length > 0
+    && (isFuture || !!deactivationDate)
+    && (!hasOutstanding || paymentCollected !== null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setLoading(true); setError('');
+    try {
+      await deactivateSubscription(customerId, subscriptionId, {
+        deactivationDate: isFuture ? null : deactivationDate,
+        notes: trimmedNotes,
+        paymentCollected: hasOutstanding ? paymentCollected : null,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to deactivate subscription.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title={isFuture ? 'Cancel Future Subscription' : 'Deactivate Subscription'} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ModalError msg={error} />
+        {isFuture ? (
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This future subscription will be cancelled immediately.
+          </p>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Deactivation date<span className="text-red-500 ml-0.5">*</span>
+            </label>
+            <input
+              type="date"
+              value={deactivationDate}
+              min={todayIST}
+              max={endDate || undefined}
+              onChange={(e) => setDeactivationDate(e.target.value)}
+              required
+              className={INPUT}
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Service stops on this date. Must be on or before {fmtDate(endDate)}.
+            </p>
+          </div>
+        )}
+        {hasOutstanding && (
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              This subscription has an outstanding{' '}
+              <span className="font-semibold">
+                {subscriptionStatus === 'GRACE' ? 'Grace Period' : 'Payment Pending'}
+              </span>{' '}
+              balance. Was payment collected?<span className="text-red-500 ml-0.5">*</span>
+            </p>
+            <div className="flex gap-3">
+              <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === true ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}>
+                <input type="radio" name="paymentCollected" checked={paymentCollected === true}
+                  onChange={() => setPaymentCollected(true)} className="sr-only" />
+                Yes, payment collected
+              </label>
+              <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === false ? 'bg-red-600 border-red-600 text-white' : 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'}`}>
+                <input type="radio" name="paymentCollected" checked={paymentCollected === false}
+                  onChange={() => setPaymentCollected(false)} className="sr-only" />
+                No, write off
+              </label>
+            </div>
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Reason / notes<span className="text-red-500 ml-0.5">*</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Why is this subscription being deactivated?"
+            required
+            className={`${INPUT} resize-none`}
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="submit" disabled={loading || !canSubmit}
+            className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+            {loading ? 'Saving…' : (isFuture ? 'Cancel Subscription' : 'Schedule Deactivation')}
+          </button>
+          <button type="button" onClick={onClose} disabled={loading}
+            className="text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 // ── Close Account Confirm Modal ───────────────────────────────
 function CloseAccountModal({ customer, onClose, onSuccess }) {
   const hasOutstanding = customer.subscriptionStatus === 'GRACE' || customer.subscriptionStatus === 'PAYMENT_PENDING';
@@ -494,12 +608,12 @@ function CloseAccountModal({ customer, onClose, onSuccess }) {
             <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === true ? 'bg-green-600 border-green-600 text-white' : 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}>
               <input type="radio" name="paymentCollected" checked={paymentCollected === true}
                 onChange={() => onPaymentChoice(true)} className="sr-only" />
-              Yes
+              Yes, payment collected
             </label>
             <label className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border text-sm font-medium transition ${paymentCollected === false ? 'bg-red-600 border-red-600 text-white' : 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'}`}>
               <input type="radio" name="paymentCollected" checked={paymentCollected === false}
                 onChange={() => onPaymentChoice(false)} className="sr-only" />
-              No
+              No, write off
             </label>
           </div>
         </div>
@@ -714,7 +828,21 @@ export default function CustomerDetail() {
 
       {/* Subscription card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
-        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Current Subscription</h3>
+        <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Current Subscription</h3>
+          {customer.currentSubscriptionId
+            && customer.subscriptionStatus
+            && customer.subscriptionStatus !== 'SUSPENDED'
+            && customer.subscriptionStatus !== 'CANCELLED'
+            && !customer.currentSubscriptionDeactivationDate && (
+            <button
+              onClick={() => setModal('deactivateCurrent')}
+              className="bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition"
+            >
+              Deactivate Subscription
+            </button>
+          )}
+        </div>
         {customer.currentSubscriptionStart ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
@@ -732,6 +860,13 @@ export default function CustomerDetail() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Payment Status</p>
               <StatusBadge status={customer.subscriptionStatus || customer.status} />
             </div>
+            {customer.currentSubscriptionDeactivationDate && (
+              <div className="sm:col-span-2 lg:col-span-3">
+                <div className="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-sm text-amber-700 dark:text-amber-300 font-medium">
+                  Deactivation scheduled for {fmtDate(customer.currentSubscriptionDeactivationDate)}. Service will be suspended on that date.
+                </div>
+              </div>
+            )}
             {customer.paymentPending && (
               <div className="sm:col-span-2 lg:col-span-3">
                 <div className="bg-orange-50 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2 text-sm text-orange-700 dark:text-orange-300 font-medium">
@@ -744,6 +879,27 @@ export default function CustomerDetail() {
           <p className="text-sm text-gray-500 dark:text-gray-400">No active subscription.</p>
         )}
       </div>
+
+      {/* Future subscription card */}
+      {customer.futureSubscriptionId && customer.futureSubscriptionStatus === 'SCHEDULED' && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
+          <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+            <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Future Subscription</h3>
+            <button
+              onClick={() => setModal('deactivateFuture')}
+              className="bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition"
+            >
+              Cancel Subscription
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Status</p>
+              <StatusBadge status={customer.futureSubscriptionStatus} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payment history */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -847,6 +1003,28 @@ export default function CustomerDetail() {
       )}
       {modal === 'deleteCustomer' && (
         <DeleteCustomerModal customerId={id} onClose={closeModal} onSuccess={() => navigate('/admin/customers')} />
+      )}
+      {modal === 'deactivateCurrent' && customer.currentSubscriptionId && (
+        <DeactivateSubscriptionModal
+          customerId={id}
+          subscriptionId={customer.currentSubscriptionId}
+          isFuture={false}
+          endDate={customer.currentSubscriptionEnd}
+          subscriptionStatus={customer.subscriptionStatus}
+          onClose={closeModal}
+          onSuccess={() => onSuccess('Subscription deactivation scheduled.')}
+        />
+      )}
+      {modal === 'deactivateFuture' && customer.futureSubscriptionId && (
+        <DeactivateSubscriptionModal
+          customerId={id}
+          subscriptionId={customer.futureSubscriptionId}
+          isFuture={true}
+          endDate={null}
+          subscriptionStatus={customer.futureSubscriptionStatus}
+          onClose={closeModal}
+          onSuccess={() => onSuccess('Future subscription cancelled.')}
+        />
       )}
     </AdminLayout>
   );

@@ -32,4 +32,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     // Find subscriptions whose start date falls within a given month window
     List<Subscription> findByCustomerAndStartDateBetween(Customer customer, LocalDate from, LocalDate to);
+
+    // Scheduler: subscriptions with a pending deactivation due today (or earlier) that have not yet reached a terminal status.
+    List<Subscription> findByDeactivationDateLessThanEqualAndStatusNotIn(LocalDate date, Collection<SubscriptionStatus> excludedStatuses);
 }
