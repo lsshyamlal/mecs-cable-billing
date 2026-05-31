@@ -142,3 +142,4 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-30 21:28` — Fix: capture monthly rate at enrollment to avoid rate-less subscriptions
 - `2026-05-30 21:42` — Fix: route future-subscription cancellation through close-account flow
 - `2026-05-30 21:47` — Chore: add Claude Code project hooks for README changelog reminders
+- `2026-05-31 18:10` — Feat: add organisation hierarchy — Company → City → Group → Employee → Area, with employee portal (ROLE_EMPLOYEE), area-based access control, and admin drill-down UI
