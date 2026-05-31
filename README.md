@@ -138,3 +138,4 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-30 16:42` — Feat: enforce single active session and cross-tab auth sync
 - `2026-05-30 17:19` — Docs: add GCP migration plan for moving app off local Mac
 - `2026-05-30 20:34` — Feat: expand customer address into city → area → street hierarchy
+- `2026-05-30 21:47` — Chore: add Claude Code project hooks for README changelog reminders
