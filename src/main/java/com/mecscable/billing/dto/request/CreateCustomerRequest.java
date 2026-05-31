@@ -9,7 +9,7 @@ public record CreateCustomerRequest(
         @NotBlank(message = "First name is required") String firstName,
         String lastName,
         String doorNumber,
-        String streetName,
+        Long streetId,
         @NotNull(message = "Area is required") Long areaId,
         @NotBlank(message = "Phone is required") String phone,
         String email,

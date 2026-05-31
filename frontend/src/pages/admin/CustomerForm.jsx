@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
-import { createCustomer, getAreas } from '../../api';
+import { createCustomer, getCities, getAreas, getStreets } from '../../api';
 
 function Field({ label, required, children }) {
   return (
@@ -18,21 +18,37 @@ const INPUT = 'w-full border border-gray-300 dark:border-gray-600 rounded-lg px-
 
 export default function CustomerForm() {
   const navigate = useNavigate();
+  const [cities, setCities] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [streets, setStreets] = useState([]);
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
-    upiId: '', stbId: '', doorNumber: '', streetName: '',
-    areaId: '', subscriptionStartDate: '',
+    upiId: '', stbId: '', doorNumber: '',
+    cityId: '', areaId: '', streetId: '',
+    subscriptionStartDate: '',
     portalPassword: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    getCities().then((r) => setCities(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
+    getStreets().then((r) => setStreets(r.data)).catch(() => {});
   }, []);
 
+  const filteredAreas = form.cityId
+    ? areas.filter((a) => String(a.cityId) === form.cityId)
+    : areas;
+  const filteredStreets = form.areaId
+    ? streets.filter((s) => String(s.areaId) === form.areaId)
+    : [];
+
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const onCityChange = (e) =>
+    setForm((f) => ({ ...f, cityId: e.target.value, areaId: '', streetId: '' }));
+  const onAreaChange = (e) =>
+    setForm((f) => ({ ...f, areaId: e.target.value, streetId: '' }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,8 +62,8 @@ export default function CustomerForm() {
         upiId: form.upiId || null,
         stbId: form.stbId || null,
         doorNumber: form.doorNumber || null,
-        streetName: form.streetName || null,
         areaId: form.areaId ? Number(form.areaId) : null,
+        streetId: form.streetId ? Number(form.streetId) : null,
         subscriptionStartDate: form.subscriptionStartDate || null,
         portalPassword: form.portalPassword || null,
       });
@@ -106,19 +122,45 @@ export default function CustomerForm() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Address</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Door Number">
-              <input name="doorNumber" value={form.doorNumber} onChange={onChange} className={INPUT} />
-            </Field>
-            <Field label="Street Name">
-              <input name="streetName" value={form.streetName} onChange={onChange} className={INPUT} />
+            <Field label="City" required>
+              <select name="cityId" value={form.cityId} onChange={onCityChange} required className={INPUT}>
+                <option value="">Select city…</option>
+                {cities.map((c) => (
+                  <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Area" required>
-              <select name="areaId" value={form.areaId} onChange={onChange} required className={INPUT}>
-                <option value="">Select area…</option>
-                {areas.map((a) => (
+              <select
+                name="areaId"
+                value={form.areaId}
+                onChange={onAreaChange}
+                required
+                disabled={!form.cityId}
+                className={`${INPUT} ${!form.cityId ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">{form.cityId ? 'Select area…' : 'Pick city first'}</option>
+                {filteredAreas.map((a) => (
                   <option key={a.areaId} value={a.areaId}>{a.areaName}</option>
                 ))}
               </select>
+            </Field>
+            <Field label="Street">
+              <select
+                name="streetId"
+                value={form.streetId}
+                onChange={onChange}
+                disabled={!form.areaId}
+                className={`${INPUT} ${!form.areaId ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">{form.areaId ? 'Select street (optional)…' : 'Pick area first'}</option>
+                {filteredStreets.map((s) => (
+                  <option key={s.streetId} value={s.streetId}>{s.streetName}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Door Number">
+              <input name="doorNumber" value={form.doorNumber} onChange={onChange} className={INPUT} />
             </Field>
           </div>
         </div>

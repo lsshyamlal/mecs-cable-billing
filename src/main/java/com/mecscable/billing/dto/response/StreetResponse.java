@@ -1,9 +1,10 @@
 package com.mecscable.billing.dto.response;
 
-public record AreaResponse(
+public record StreetResponse(
+        Long streetId,
+        String streetName,
         Long areaId,
         String areaName,
-        int gracePeriodDay,
         Long cityId,
         String cityName
 ) {}

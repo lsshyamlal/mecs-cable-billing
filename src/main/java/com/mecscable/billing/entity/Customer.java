@@ -34,8 +34,9 @@ public class Customer {
     @Column(name = "door_number", length = 50)
     private String doorNumber;
 
-    @Column(name = "street_name", length = 200)
-    private String streetName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "street_id")
+    private Street street;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id", nullable = false)

@@ -31,8 +31,10 @@ public class CustomerController {
     public ResponseEntity<List<CustomerResponse>> listCustomers(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String futureStatus,
-            @RequestParam(required = false) Long areaId) {
-        return ResponseEntity.ok(customerService.listCustomers(status, futureStatus, areaId));
+            @RequestParam(required = false) Long cityId,
+            @RequestParam(required = false) Long areaId,
+            @RequestParam(required = false) Long streetId) {
+        return ResponseEntity.ok(customerService.listCustomers(status, futureStatus, cityId, areaId, streetId));
     }
 
     @GetMapping("/{id}")

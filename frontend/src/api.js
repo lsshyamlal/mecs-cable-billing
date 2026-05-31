@@ -72,10 +72,25 @@ export const getCurrentSubscription = () =>
 export const getSubscriptionHistory = () =>
   api.get('/portal/me/subscription/history');
 
+// ── Cities ───────────────────────────────────────────────────
+export const getCities = () => api.get('/cities');
+export const createCity = (data) => api.post('/cities', data);
+export const updateCity = (id, data) => api.put(`/cities/${id}`, data);
+export const deleteCity = (id) => api.delete(`/cities/${id}`);
+
 // ── Areas ────────────────────────────────────────────────────
-export const getAreas = () => api.get('/areas');
+export const getAreas = (cityId) =>
+  api.get('/areas', cityId ? { params: { cityId } } : {});
 export const createArea = (data) => api.post('/areas', data);
 export const updateArea = (id, data) => api.put(`/areas/${id}`, data);
+export const deleteArea = (id) => api.delete(`/areas/${id}`);
+
+// ── Streets ──────────────────────────────────────────────────
+export const getStreets = (areaId) =>
+  api.get('/streets', areaId ? { params: { areaId } } : {});
+export const createStreet = (data) => api.post('/streets', data);
+export const updateStreet = (id, data) => api.put(`/streets/${id}`, data);
+export const deleteStreet = (id) => api.delete(`/streets/${id}`);
 
 // ── Subscription Packs ────────────────────────────────────────
 export const getSubscriptionPacks = () => api.get('/subscription-packs');

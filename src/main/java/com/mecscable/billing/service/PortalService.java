@@ -38,7 +38,7 @@ public class PortalService {
                 c.getFirstName(),
                 c.getLastName(),
                 c.getDoorNumber(),
-                c.getStreetName(),
+                c.getStreet() != null ? c.getStreet().getStreetName() : null,
                 c.getArea().getAreaName(),
                 c.getPhone(),
                 c.getEmail(),

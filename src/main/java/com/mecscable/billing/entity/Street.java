@@ -9,27 +9,23 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "areas")
+@Table(name = "streets")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Area {
+public class Street {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "area_id")
-    private Long areaId;
+    @Column(name = "street_id")
+    private Long streetId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "city_id", nullable = false)
-    private City city;
+    @JoinColumn(name = "area_id", nullable = false)
+    private Area area;
 
-    @Column(name = "area_name", nullable = false, length = 200)
-    private String areaName;
-
-    // Day of the month (1–28) within the subscription's start month by which payment must be received
-    @Column(name = "grace_period_day", nullable = false)
-    private int gracePeriodDay = 5;
+    @Column(name = "street_name", nullable = false, length = 200)
+    private String streetName;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

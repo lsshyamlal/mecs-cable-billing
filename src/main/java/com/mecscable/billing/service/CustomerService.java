@@ -26,6 +26,8 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final AreaRepository areaRepository;
+    private final CityRepository cityRepository;
+    private final StreetRepository streetRepository;
     private final AdminRepository adminRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
@@ -36,6 +38,8 @@ public class CustomerService {
 
     public CustomerService(CustomerRepository customerRepository,
                            AreaRepository areaRepository,
+                           CityRepository cityRepository,
+                           StreetRepository streetRepository,
                            AdminRepository adminRepository,
                            SubscriptionRepository subscriptionRepository,
                            PaymentRepository paymentRepository,
@@ -45,6 +49,8 @@ public class CustomerService {
                            AuthService authService) {
         this.customerRepository = customerRepository;
         this.areaRepository = areaRepository;
+        this.cityRepository = cityRepository;
+        this.streetRepository = streetRepository;
         this.adminRepository = adminRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
@@ -54,27 +60,33 @@ public class CustomerService {
         this.authService = authService;
     }
 
-    public List<CustomerResponse> listCustomers(String status, String futureStatus, Long areaId) {
+    public List<CustomerResponse> listCustomers(String status, String futureStatus,
+                                                Long cityId, Long areaId, Long streetId) {
         // Subscription statuses (GRACE, PAYMENT_PENDING, PAID) are not customer-level enums;
-        // fetch by area/all then filter on the computed subscriptionStatus in the response.
+        // fetch by the most-specific location filter then filter on the computed subscriptionStatus.
         boolean isSubscriptionStatus = status != null &&
                 (status.equals("GRACE") || status.equals("PAYMENT_PENDING") || status.equals("PAID")
                         || status.equals("CANCELLED"));
 
+        // Pick the narrowest available location filter; refine the rest in memory.
         List<Customer> customers;
-        if (isSubscriptionStatus || futureStatus != null) {
-            customers = areaId != null
-                    ? customerRepository.findByArea(findArea(areaId))
-                    : customerRepository.findAll();
-        } else if (status != null && areaId != null) {
-            Area area = findArea(areaId);
-            customers = customerRepository.findByAreaAndStatus(area, CustomerStatus.valueOf(status));
-        } else if (status != null) {
-            customers = customerRepository.findByStatus(CustomerStatus.valueOf(status));
+        if (streetId != null) {
+            customers = customerRepository.findByStreet(findStreet(streetId));
         } else if (areaId != null) {
             customers = customerRepository.findByArea(findArea(areaId));
+        } else if (cityId != null) {
+            customers = customerRepository.findByAreaCity(findCity(cityId));
+        } else if (!isSubscriptionStatus && futureStatus == null && status != null) {
+            customers = customerRepository.findByStatus(CustomerStatus.valueOf(status));
         } else {
             customers = customerRepository.findAll();
+        }
+
+        // Refine by status when status is a customer-level enum and a location filter was applied.
+        if (!isSubscriptionStatus && futureStatus == null && status != null
+                && (cityId != null || areaId != null || streetId != null)) {
+            CustomerStatus s = CustomerStatus.valueOf(status);
+            customers = customers.stream().filter(c -> c.getStatus() == s).toList();
         }
 
         List<CustomerResponse> responses = customers.stream().map(this::toResponse).toList();
@@ -111,8 +123,10 @@ public class CustomerService {
         customer.setFirstName(request.firstName());
         customer.setLastName(request.lastName());
         customer.setDoorNumber(request.doorNumber());
-        customer.setStreetName(request.streetName());
         customer.setArea(area);
+        if (request.streetId() != null) {
+            customer.setStreet(resolveStreetForArea(request.streetId(), area));
+        }
         customer.setPhone(request.phone());
         customer.setEmail(request.email());
         customer.setUpiId(request.upiId());
@@ -139,7 +153,6 @@ public class CustomerService {
         if (request.firstName() != null) customer.setFirstName(request.firstName());
         if (request.lastName() != null) customer.setLastName(request.lastName());
         if (request.doorNumber() != null) customer.setDoorNumber(request.doorNumber());
-        if (request.streetName() != null) customer.setStreetName(request.streetName());
         if (request.phone() != null) {
             customerRepository.findByPhone(request.phone())
                     .filter(c -> !c.getCustomerId().equals(customerId))
@@ -159,7 +172,22 @@ public class CustomerService {
         }
 
         if (request.areaId() != null) {
-            customer.setArea(findArea(request.areaId()));
+            Area newArea = findArea(request.areaId());
+            customer.setArea(newArea);
+            // If the existing street belongs to a different area, drop it; the caller
+            // can supply a matching streetId in this same request to set a new one.
+            if (customer.getStreet() != null
+                    && !customer.getStreet().getArea().getAreaId().equals(newArea.getAreaId())) {
+                customer.setStreet(null);
+            }
+        }
+
+        // streetId: explicit overwrite — null clears, any value re-validates against the area.
+        Area effectiveArea = customer.getArea();
+        if (request.streetId() == null) {
+            customer.setStreet(null);
+        } else {
+            customer.setStreet(resolveStreetForArea(request.streetId(), effectiveArea));
         }
 
         customer = customerRepository.save(customer);
@@ -317,6 +345,24 @@ public class CustomerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Area not found: " + areaId));
     }
 
+    private City findCity(Long cityId) {
+        return cityRepository.findById(cityId)
+                .orElseThrow(() -> new ResourceNotFoundException("City not found: " + cityId));
+    }
+
+    private Street findStreet(Long streetId) {
+        return streetRepository.findById(streetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Street not found: " + streetId));
+    }
+
+    private Street resolveStreetForArea(Long streetId, Area area) {
+        Street street = findStreet(streetId);
+        if (!street.getArea().getAreaId().equals(area.getAreaId())) {
+            throw new IllegalArgumentException("Street does not belong to the selected area");
+        }
+        return street;
+    }
+
     private CustomerResponse toResponse(Customer c) {
         String subscriptionStatus = null;
         LocalDate gracePeriodDeadline = null;
@@ -344,14 +390,20 @@ public class CustomerService {
                     .map(s -> s.getStatus().name())
                     .orElse(null);
         }
+        Street street = c.getStreet();
+        Area area = c.getArea();
+        City city = area.getCity();
         return new CustomerResponse(
                 c.getCustomerId(),
                 c.getFirstName(),
                 c.getLastName(),
                 c.getDoorNumber(),
-                c.getStreetName(),
-                c.getArea().getAreaId(),
-                c.getArea().getAreaName(),
+                street != null ? street.getStreetId() : null,
+                street != null ? street.getStreetName() : null,
+                area.getAreaId(),
+                area.getAreaName(),
+                city.getCityId(),
+                city.getCityName(),
                 c.getPhone(),
                 c.getEmail(),
                 c.getUpiId(),

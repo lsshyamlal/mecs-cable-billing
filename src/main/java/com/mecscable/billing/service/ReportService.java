@@ -95,7 +95,7 @@ public class ReportService {
     // ── Customer report ───────────────────────────────────────
 
     public List<CustomerResponse> getCustomerReport(String status, Long areaId) {
-        return customerService.listCustomers(status, null, areaId);
+        return customerService.listCustomers(status, null, null, areaId, null);
     }
 
     public byte[] exportCustomersCsv(String status, Long areaId) {

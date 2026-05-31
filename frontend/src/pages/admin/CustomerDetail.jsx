@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import {
-  getCustomer, getAreas, updateCustomer, closeAccount,
+  getCustomer, getCities, getAreas, getStreets, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer, getSubscriptionPacks,
   getCustomerStatusHistory,
@@ -318,13 +318,14 @@ function ResetPasswordModal({ customerId, onClose, onSuccess }) {
 }
 
 // ── Edit Customer Modal ───────────────────────────────────────
-function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
+function EditCustomerModal({ customer, cities, areas, streets, onClose, onSuccess }) {
   const [form, setForm] = useState({
     firstName: customer.firstName || '',
     lastName: customer.lastName || '',
     doorNumber: customer.doorNumber || '',
-    streetName: customer.streetName || '',
-    areaId: customer.areaId || '',
+    cityId: customer.cityId ? String(customer.cityId) : '',
+    areaId: customer.areaId ? String(customer.areaId) : '',
+    streetId: customer.streetId ? String(customer.streetId) : '',
     phone: customer.phone || '',
     email: customer.email || '',
     upiId: customer.upiId || '',
@@ -334,13 +335,32 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
   const [error, setError] = useState('');
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
+  const filteredAreas = form.cityId
+    ? areas.filter((a) => String(a.cityId) === form.cityId)
+    : areas;
+  const filteredStreets = form.areaId
+    ? streets.filter((s) => String(s.areaId) === form.areaId)
+    : [];
+
+  const onCityChange = (e) =>
+    setForm((f) => ({ ...f, cityId: e.target.value, areaId: '', streetId: '' }));
+  const onAreaChange = (e) =>
+    setForm((f) => ({ ...f, areaId: e.target.value, streetId: '' }));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
       await updateCustomer(customer.customerId, {
-        ...form,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        doorNumber: form.doorNumber,
+        phone: form.phone,
+        email: form.email,
+        upiId: form.upiId,
+        stbId: form.stbId,
         areaId: form.areaId ? Number(form.areaId) : null,
+        streetId: form.streetId ? Number(form.streetId) : null,
       });
       onSuccess();
     } catch (err) {
@@ -362,16 +382,44 @@ function EditCustomerModal({ customer, areas, onClose, onSuccess }) {
         <InputRow label="Email" name="email" type="email" value={form.email} onChange={onChange} />
         <InputRow label="UPI ID" name="upiId" value={form.upiId} onChange={onChange} />
         <InputRow label="STB ID" name="stbId" value={form.stbId} onChange={onChange} />
-        <div className="grid grid-cols-2 gap-3">
-          <InputRow label="Door No." name="doorNumber" value={form.doorNumber} onChange={onChange} />
-          <InputRow label="Street" name="streetName" value={form.streetName} onChange={onChange} />
+        <InputRow label="Door No." name="doorNumber" value={form.doorNumber} onChange={onChange} />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City<span className="text-red-500 ml-0.5">*</span></label>
+          <select name="cityId" value={form.cityId} onChange={onCityChange} required className={INPUT}>
+            <option value="">Select city…</option>
+            {cities.map((c) => (
+              <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area</label>
-          <select name="areaId" value={form.areaId} onChange={onChange} className={INPUT}>
-            <option value="">Select area…</option>
-            {areas.map((a) => (
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area<span className="text-red-500 ml-0.5">*</span></label>
+          <select
+            name="areaId"
+            value={form.areaId}
+            onChange={onAreaChange}
+            required
+            disabled={!form.cityId}
+            className={`${INPUT} ${!form.cityId ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
+            <option value="">{form.cityId ? 'Select area…' : 'Pick city first'}</option>
+            {filteredAreas.map((a) => (
               <option key={a.areaId} value={a.areaId}>{a.areaName}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Street</label>
+          <select
+            name="streetId"
+            value={form.streetId}
+            onChange={onChange}
+            disabled={!form.areaId}
+            className={`${INPUT} ${!form.areaId ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
+            <option value="">{form.areaId ? 'No street' : 'Pick area first'}</option>
+            {filteredStreets.map((s) => (
+              <option key={s.streetId} value={s.streetId}>{s.streetName}</option>
             ))}
           </select>
         </div>
@@ -525,7 +573,9 @@ export default function CustomerDetail() {
   const [customer, setCustomer] = useState(null);
   const [payments, setPayments] = useState([]);
   const [statusHistory, setStatusHistory] = useState([]);
+  const [cities, setCities] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [streets, setStreets] = useState([]);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
@@ -538,7 +588,9 @@ export default function CustomerDetail() {
   };
 
   useEffect(() => {
+    getCities().then((r) => setCities(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
+    getStreets().then((r) => setStreets(r.data)).catch(() => {});
     reload();
   }, [id]);
 
@@ -565,7 +617,7 @@ export default function CustomerDetail() {
   );
 
   const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(' ');
-  const address = [customer.doorNumber, customer.streetName, customer.areaName].filter(Boolean).join(', ');
+  const address = [customer.doorNumber, customer.streetName, customer.areaName, customer.cityName].filter(Boolean).join(', ');
 
   return (
     <AdminLayout>
@@ -634,7 +686,9 @@ export default function CustomerDetail() {
           <Field label="Email" value={customer.email} />
           <Field label="STB ID" value={customer.stbId} />
           <Field label="UPI ID" value={customer.upiId} />
+          <Field label="City" value={customer.cityName} />
           <Field label="Area" value={customer.areaName} />
+          <Field label="Street" value={customer.streetName} />
           <Field label="Address" value={address} />
           <Field label="Member Since" value={fmtDateTime(customer.accountCreatedAt)} />
           <div>
@@ -780,7 +834,7 @@ export default function CustomerDetail() {
         <RecordPaymentModal customer={customer} onClose={closeModal} onSuccess={() => onSuccess('Payment recorded.')} />
       )}
       {modal === 'edit' && (
-        <EditCustomerModal customer={customer} areas={areas} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
+        <EditCustomerModal customer={customer} cities={cities} areas={areas} streets={streets} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
       )}
       {modal === 'reenroll' && (
         <ReEnrollModal customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Customer re-enrolled.')} />

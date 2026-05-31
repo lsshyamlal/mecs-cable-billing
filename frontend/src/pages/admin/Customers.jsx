@@ -1,28 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
-import { listCustomers, getAreas } from '../../api';
+import { listCustomers, getCities, getAreas, getStreets } from '../../api';
 import { StatusBadge, fmtDate, fmtCurrency } from '../../utils';
-
-const STATUS_LABELS = {
-  ACCOUNT_CLOSED: 'Account Closed',
-  PAYMENT_PENDING: 'Payment Pending',
-};
 
 export default function Customers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState(null);
+  const [cities, setCities] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [streets, setStreets] = useState([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const statusFilter = searchParams.get('status') || '';
   const futureStatusFilter = searchParams.get('futureStatus') || '';
+  const cityFilter = searchParams.get('cityId') || '';
   const areaFilter = searchParams.get('areaId') || '';
+  const streetFilter = searchParams.get('streetId') || '';
 
   useEffect(() => {
+    getCities().then((r) => setCities(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
+    getStreets().then((r) => setStreets(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -30,15 +31,39 @@ export default function Customers() {
     const params = {};
     if (statusFilter) params.status = statusFilter;
     if (futureStatusFilter) params.futureStatus = futureStatusFilter;
+    if (cityFilter) params.cityId = cityFilter;
     if (areaFilter) params.areaId = areaFilter;
+    if (streetFilter) params.streetId = streetFilter;
     listCustomers(params)
       .then((r) => setCustomers(r.data))
       .catch(() => setError('Failed to load customers.'));
-  }, [statusFilter, futureStatusFilter, areaFilter]);
+  }, [statusFilter, futureStatusFilter, cityFilter, areaFilter, streetFilter]);
 
-  const setFilter = (key, val) => {
+  const filteredAreas = cityFilter
+    ? areas.filter((a) => String(a.cityId) === cityFilter)
+    : areas;
+  const filteredStreets = areaFilter
+    ? streets.filter((s) => String(s.areaId) === areaFilter)
+    : cityFilter
+      ? streets.filter((s) => String(s.cityId) === cityFilter)
+      : streets;
+
+  const setCity = (val) => {
     const next = new URLSearchParams(searchParams);
-    if (val) next.set(key, val); else next.delete(key);
+    if (val) next.set('cityId', val); else next.delete('cityId');
+    next.delete('areaId');
+    next.delete('streetId');
+    setSearchParams(next);
+  };
+  const setArea = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('areaId', val); else next.delete('areaId');
+    next.delete('streetId');
+    setSearchParams(next);
+  };
+  const setStreet = (val) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set('streetId', val); else next.delete('streetId');
     setSearchParams(next);
   };
 
@@ -108,16 +133,36 @@ export default function Customers() {
           </optgroup>
         </select>
         <select
+          value={cityFilter}
+          onChange={(e) => setCity(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">All Cities</option>
+          {cities.map((c) => (
+            <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
+          ))}
+        </select>
+        <select
           value={areaFilter}
-          onChange={(e) => setFilter('areaId', e.target.value)}
+          onChange={(e) => setArea(e.target.value)}
           className={inputCls}
         >
           <option value="">All Areas</option>
-          {areas.map((a) => (
+          {filteredAreas.map((a) => (
             <option key={a.areaId} value={a.areaId}>{a.areaName}</option>
           ))}
         </select>
-        {(statusFilter || futureStatusFilter || areaFilter || search) && (
+        <select
+          value={streetFilter}
+          onChange={(e) => setStreet(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">All Streets</option>
+          {filteredStreets.map((s) => (
+            <option key={s.streetId} value={s.streetId}>{s.streetName}</option>
+          ))}
+        </select>
+        {(statusFilter || futureStatusFilter || cityFilter || areaFilter || streetFilter || search) && (
           <button
             onClick={() => { setSearch(''); setSearchParams({}); }}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
@@ -149,6 +194,7 @@ export default function Customers() {
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">STB ID</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">City</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Area</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Phone</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment Status</th>
@@ -168,6 +214,7 @@ export default function Customers() {
                       {[c.firstName, c.lastName].filter(Boolean).join(' ')}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">{c.stbId || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{c.cityName || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{c.areaName || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{c.phone}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.subscriptionStatus || c.status} /></td>
