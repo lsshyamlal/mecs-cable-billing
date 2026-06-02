@@ -63,7 +63,7 @@ public class CustomerService {
     }
 
     public List<CustomerResponse> listCustomers(String status, String futureStatus,
-                                                Long cityId, Long areaId, Long streetId) {
+                                                Long companyId, Long cityId, Long areaId, Long streetId) {
         // Subscription statuses (GRACE, PAYMENT_PENDING, PAID) are not customer-level enums;
         // fetch by the most-specific location filter then filter on the computed subscriptionStatus.
         boolean isSubscriptionStatus = status != null &&
@@ -78,6 +78,8 @@ public class CustomerService {
             customers = customerRepository.findByArea(findArea(areaId));
         } else if (cityId != null) {
             customers = customerRepository.findByAreaCity(findCity(cityId));
+        } else if (companyId != null) {
+            customers = customerRepository.findByAreaCityCompanyId(companyId);
         } else if (!isSubscriptionStatus && futureStatus == null && status != null) {
             customers = customerRepository.findByStatus(CustomerStatus.valueOf(status));
         } else {
@@ -86,7 +88,7 @@ public class CustomerService {
 
         // Refine by status when status is a customer-level enum and a location filter was applied.
         if (!isSubscriptionStatus && futureStatus == null && status != null
-                && (cityId != null || areaId != null || streetId != null)) {
+                && (companyId != null || cityId != null || areaId != null || streetId != null)) {
             CustomerStatus s = CustomerStatus.valueOf(status);
             customers = customers.stream().filter(c -> c.getStatus() == s).toList();
         }

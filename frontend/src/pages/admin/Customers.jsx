@@ -43,20 +43,25 @@ export default function Customers() {
     getStreets().then((r) => setStreets(r.data)).catch(() => {});
   }, []);
 
-  // The /customers API only accepts city/area/street server-side; company/group/
-  // employee are applied client-side after fetch (same shape as Dashboard).
+  // company/street/area/city are all server-side; group/employee are client-side.
   useEffect(() => {
     setCustomers(null);
     const params = {};
     if (statusFilter) params.status = statusFilter;
     if (futureStatusFilter) params.futureStatus = futureStatusFilter;
-    if (cityFilter) params.cityId = cityFilter;
-    if (areaFilter) params.areaId = areaFilter;
-    if (streetFilter) params.streetId = streetFilter;
+    if (streetFilter) {
+      params.streetId = streetFilter;
+    } else if (areaFilter) {
+      params.areaId = areaFilter;
+    } else if (cityFilter) {
+      params.cityId = cityFilter;
+    } else if (companyFilter) {
+      params.companyId = companyFilter;
+    }
     listCustomers(params)
       .then((r) => setCustomers(r.data))
       .catch(() => setError('Failed to load customers.'));
-  }, [statusFilter, futureStatusFilter, cityFilter, areaFilter, streetFilter]);
+  }, [statusFilter, futureStatusFilter, companyFilter, cityFilter, areaFilter, streetFilter]);
 
   // Cascading dropdown options
   const filteredCities = useMemo(
@@ -153,7 +158,7 @@ export default function Customers() {
     setSearchParams(next);
   };
 
-  // Client-side hierarchy filter (company / group / employee — none server-side).
+  // Client-side hierarchy filter (group / employee — company is now server-side).
   const hierarchyMatches = (c) => {
     if (employeeFilter) {
       const emp = employees.find((e) => String(e.employeeId) === employeeFilter);
@@ -164,12 +169,6 @@ export default function Customers() {
       const empsInGroup = employees.filter((e) => String(e.groupId) === groupFilter);
       const assigned = new Set(empsInGroup.flatMap((e) => (e.assignedAreas || []).map((aa) => aa.areaId)));
       return assigned.has(c.areaId);
-    }
-    if (companyFilter) {
-      const cityIdsInCo = new Set(
-        cities.filter((ct) => String(ct.companyId) === companyFilter).map((ct) => ct.cityId)
-      );
-      return cityIdsInCo.has(c.cityId);
     }
     return true;
   };
@@ -249,9 +248,16 @@ export default function Customers() {
           className={inputCls}
         >
           <option value="">All Companies</option>
-          {companies.map((c) => (
+          {companies.filter((c) => c.active).map((c) => (
             <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
           ))}
+          {companies.some((c) => !c.active) && (
+            <optgroup label="Inactive">
+              {companies.filter((c) => !c.active).map((c) => (
+                <option key={c.companyId} value={c.companyId}>{c.companyName} (Inactive)</option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <select
           value={cityFilter}

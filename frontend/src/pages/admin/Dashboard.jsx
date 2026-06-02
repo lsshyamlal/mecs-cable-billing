@@ -248,9 +248,16 @@ export default function Dashboard() {
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Company</label>
               <select value={companyId} onChange={(e) => handleCompanyChange(e.target.value)} className={SELECT_CLS}>
                 <option value="">All Companies</option>
-                {companies.map((c) => (
+                {companies.filter((c) => c.active).map((c) => (
                   <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
                 ))}
+                {companies.some((c) => !c.active) && (
+                  <optgroup label="Inactive">
+                    {companies.filter((c) => !c.active).map((c) => (
+                      <option key={c.companyId} value={c.companyId}>{c.companyName} (Inactive)</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             <div>
