@@ -146,3 +146,5 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-31 11:45` — Feat: add cascading hierarchy filter (Company → City → Group → Employee → Area) to admin dashboard so status sections can be scoped without leaving the page; default view shows all customers
 - `2026-05-31 15:39` — Feat: extend Customers page filter bar with Company / Group / Employee dropdowns alongside existing City / Area / Street so the customer list supports the same hierarchy as the dashboard
 - `2026-05-31 16:05` — Fix: forward all active hierarchy filters (company / city / group / employee / area) when clicking a dashboard status tile, so the Customers page lands on the correctly filtered list instead of the full one
+- `2026-05-31 21:30` — Feat: employee credential management and admin nav label renames
+- `2026-06-02 12:00` — Fix: restore company filter visibility after deactivation/reactivation — moved company filtering server-side via JPQL join query so customers always show when filtering by a re-activated company; inactive companies now appear in a labelled optgroup in the dropdown
