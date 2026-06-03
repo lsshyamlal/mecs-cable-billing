@@ -254,8 +254,15 @@ function CitiesPanel({ company, onDrillInto, setFlash }) {
   const [error, setError] = useState('');
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [unassigned, setUnassigned] = useState([]);
+  const [assignCityId, setAssignCityId] = useState('');
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState('');
 
-  const reload = () => getCities(company.companyId).then((r) => setItems(r.data)).catch(() => setItems([]));
+  const reload = () => {
+    getCities(company.companyId).then((r) => setItems(r.data)).catch(() => setItems([]));
+    getCities().then((r) => setUnassigned(r.data.filter((c) => !c.companyId))).catch(() => setUnassigned([]));
+  };
   useEffect(() => { reload(); }, [company.companyId]);
 
   const handleCreate = async (e) => {
@@ -300,18 +307,49 @@ function CitiesPanel({ company, onDrillInto, setFlash }) {
         </table>
       )}
 
-      <div className="p-6 border-t border-gray-100 dark:border-gray-700">
-        <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Add City to {company.companyName}</h3>
-        <ErrorMsg msg={error} />
-        <form onSubmit={handleCreate} className="flex flex-wrap gap-3 items-end">
+      <div className="p-6 border-t border-gray-100 dark:border-gray-700 space-y-5">
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Add City to {company.companyName}</h3>
+          <ErrorMsg msg={error} />
+          <form onSubmit={handleCreate} className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City Name<span className="text-red-500 ml-0.5">*</span></label>
+              <input value={form.cityName} onChange={(e) => setForm({ cityName: e.target.value })} required placeholder="e.g. Madurai" className={`${INPUT} w-64`} />
+            </div>
+            <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
+              {loading ? 'Adding…' : 'Add City'}
+            </button>
+          </form>
+        </div>
+
+        {unassigned.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City Name<span className="text-red-500 ml-0.5">*</span></label>
-            <input value={form.cityName} onChange={(e) => setForm({ cityName: e.target.value })} required placeholder="e.g. Madurai" className={`${INPUT} w-64`} />
+            <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Assign Existing City to {company.companyName}</h3>
+            <ErrorMsg msg={assignError} />
+            <form onSubmit={async (e) => {
+              e.preventDefault(); setAssignLoading(true); setAssignError('');
+              const city = unassigned.find((c) => c.cityId === Number(assignCityId));
+              try {
+                await updateCity(Number(assignCityId), { cityName: city.cityName, companyId: company.companyId });
+                setAssignCityId('');
+                setFlash(`City "${city.cityName}" assigned to ${company.companyName}.`);
+                reload();
+              } catch (err) { setAssignError(extractErr(err, 'Failed to assign city.')); }
+              finally { setAssignLoading(false); }
+            }} className="flex flex-wrap gap-3 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City<span className="text-red-500 ml-0.5">*</span></label>
+                <select value={assignCityId} onChange={(e) => setAssignCityId(e.target.value)} required className={`${INPUT} w-64`}>
+                  <option value="">Select unassigned city…</option>
+                  {unassigned.map((c) => <option key={c.cityId} value={c.cityId}>{c.cityName}</option>)}
+                </select>
+              </div>
+              <button type="submit" disabled={assignLoading || !assignCityId} className="bg-green-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-green-800 transition disabled:opacity-50">
+                {assignLoading ? 'Assigning…' : 'Assign City'}
+              </button>
+            </form>
           </div>
-          <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
-            {loading ? 'Adding…' : 'Add City'}
-          </button>
-        </form>
+        )}
       </div>
 
       {editTarget && (
