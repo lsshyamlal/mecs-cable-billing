@@ -148,3 +148,4 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-31 16:05` — Fix: forward all active hierarchy filters (company / city / group / employee / area) when clicking a dashboard status tile, so the Customers page lands on the correctly filtered list instead of the full one
 - `2026-05-31 21:30` — Feat: employee credential management and admin nav label renames
 - `2026-06-02 12:00` — Fix: restore company filter visibility after deactivation/reactivation — moved company filtering server-side via JPQL join query so customers always show when filtering by a re-activated company; inactive companies now appear in a labelled optgroup in the dropdown
+- `2026-06-02 19:30` — Fix: block city deletion when employee groups are linked — adds missing guard in CityService to return a clean error instead of a raw PostgreSQL FK constraint violation
