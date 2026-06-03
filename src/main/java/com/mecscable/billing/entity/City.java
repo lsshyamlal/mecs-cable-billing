@@ -23,10 +23,6 @@ public class City {
     @Column(name = "city_name", unique = true, nullable = false, length = 200)
     private String cityName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
-    private Company company;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

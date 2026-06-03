@@ -64,31 +64,24 @@ export default function Customers() {
   }, [statusFilter, futureStatusFilter, companyFilter, cityFilter, areaFilter, streetFilter]);
 
   // Cascading dropdown options
-  const filteredCities = useMemo(
-    () => (companyFilter ? cities.filter((c) => String(c.companyId) === companyFilter) : cities),
-    [cities, companyFilter]
-  );
+  const filteredCities = useMemo(() => {
+    if (!companyFilter) return cities;
+    const co = companies.find((c) => String(c.companyId) === companyFilter);
+    return co?.cityId ? cities.filter((c) => c.cityId === co.cityId) : cities;
+  }, [cities, companies, companyFilter]);
 
   const filteredGroups = useMemo(() => {
     let g = groups;
     if (companyFilter) g = g.filter((x) => String(x.companyId) === companyFilter);
-    if (cityFilter) g = g.filter((x) => String(x.cityId) === cityFilter);
     return g;
-  }, [groups, companyFilter, cityFilter]);
+  }, [groups, companyFilter]);
 
   const filteredEmployees = useMemo(() => {
     let emp = employees;
     if (companyFilter) emp = emp.filter((x) => String(x.companyId) === companyFilter);
-    if (groupFilter) {
-      emp = emp.filter((x) => String(x.groupId) === groupFilter);
-    } else if (cityFilter) {
-      const groupsInCity = new Set(
-        groups.filter((g) => String(g.cityId) === cityFilter).map((g) => g.groupId)
-      );
-      emp = emp.filter((x) => groupsInCity.has(x.groupId));
-    }
+    if (groupFilter) emp = emp.filter((x) => String(x.groupId) === groupFilter);
     return emp;
-  }, [employees, groups, companyFilter, cityFilter, groupFilter]);
+  }, [employees, companyFilter, groupFilter]);
 
   const filteredAreas = useMemo(() => {
     if (employeeFilter) {
@@ -105,13 +98,11 @@ export default function Customers() {
     if (cityFilter) {
       a = a.filter((x) => String(x.cityId) === cityFilter);
     } else if (companyFilter) {
-      const cityIdsInCo = new Set(
-        cities.filter((c) => String(c.companyId) === companyFilter).map((c) => c.cityId)
-      );
-      a = a.filter((x) => cityIdsInCo.has(x.cityId));
+      const co = companies.find((c) => String(c.companyId) === companyFilter);
+      if (co?.cityId) a = a.filter((x) => x.cityId === co.cityId);
     }
     return a;
-  }, [areas, cities, employees, companyFilter, cityFilter, groupFilter, employeeFilter]);
+  }, [areas, companies, employees, companyFilter, cityFilter, groupFilter, employeeFilter]);
 
   const filteredStreets = useMemo(() => {
     if (areaFilter) return streets.filter((s) => String(s.areaId) === areaFilter);

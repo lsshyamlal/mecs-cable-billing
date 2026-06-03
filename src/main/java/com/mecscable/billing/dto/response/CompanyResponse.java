@@ -6,5 +6,7 @@ public record CompanyResponse(
         Long companyId,
         String companyName,
         boolean active,
+        Long cityId,
+        String cityName,
         OffsetDateTime createdAt
 ) {}

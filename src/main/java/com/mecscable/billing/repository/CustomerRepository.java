@@ -2,6 +2,7 @@ package com.mecscable.billing.repository;
 
 import com.mecscable.billing.entity.Area;
 import com.mecscable.billing.entity.City;
+import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.entity.Customer;
 import com.mecscable.billing.entity.CustomerStatus;
 import com.mecscable.billing.entity.Street;
@@ -14,7 +15,7 @@ import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    @Query("SELECT c FROM Customer c WHERE c.area.city.company.companyId = :companyId")
+    @Query("SELECT c FROM Customer c JOIN Company co ON co.companyId = :companyId WHERE c.area.city = co.city")
     List<Customer> findByAreaCityCompanyId(@Param("companyId") Long companyId);
 
     List<Customer> findByStatus(CustomerStatus status);

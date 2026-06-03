@@ -1,5 +1,6 @@
 package com.mecscable.billing.repository;
 
+import com.mecscable.billing.entity.City;
 import com.mecscable.billing.entity.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     boolean existsByCompanyNameIgnoreCase(String companyName);
 
     List<Company> findAllByOrderByCompanyNameAsc();
+
+    long countByCity(City city);
 }

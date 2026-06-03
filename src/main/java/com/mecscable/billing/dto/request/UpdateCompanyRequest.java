@@ -8,5 +8,7 @@ public record UpdateCompanyRequest(
         String companyName,
 
         @NotNull(message = "Active flag is required")
-        Boolean active
+        Boolean active,
+
+        Long cityId
 ) {}

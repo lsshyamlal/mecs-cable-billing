@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import {
   getCompanies, createCompany, updateCompany, deleteCompany,
-  getCities, createCity, updateCity, deleteCity,
+  getCities,
   getGroups, createGroup, updateGroup, deleteGroup,
   getEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee,
   resetEmployeePassword,
@@ -75,11 +75,10 @@ function DeleteModal({ title, message, onConfirm, onClose, onSuccess }) {
 }
 
 // ── Breadcrumb ────────────────────────────────────────────────
-function Breadcrumb({ level, company, city, group, employee, onNavigate }) {
+function Breadcrumb({ level, company, group, employee, onNavigate }) {
   const crumbs = [
     { label: 'All Companies', targetLevel: 'companies' },
-    company && { label: company.companyName, targetLevel: 'cities' },
-    city && { label: city.cityName, targetLevel: 'groups' },
+    company && { label: company.companyName, targetLevel: 'groups' },
     group && { label: group.groupName, targetLevel: 'employees' },
     employee && { label: `${employee.firstName}${employee.lastName ? ' ' + employee.lastName : ''}`, targetLevel: 'employee-detail' },
   ].filter(Boolean);
@@ -125,20 +124,24 @@ function Skeleton({ rows = 3 }) {
 // ── Companies panel ───────────────────────────────────────────
 function CompaniesPanel({ onDrillInto, setFlash }) {
   const [items, setItems] = useState(null);
-  const [form, setForm] = useState({ companyName: '' });
+  const [cities, setCities] = useState([]);
+  const [form, setForm] = useState({ companyName: '', cityId: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const reload = () => getCompanies().then((r) => setItems(r.data)).catch(() => setItems([]));
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload();
+    getCities().then((r) => setCities(r.data)).catch(() => setCities([]));
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await createCompany({ companyName: form.companyName.trim() });
-      setForm({ companyName: '' });
+      await createCompany({ companyName: form.companyName.trim(), cityId: form.cityId ? Number(form.cityId) : null });
+      setForm({ companyName: '', cityId: '' });
       setFlash(`Company "${form.companyName}" added.`);
       reload();
     } catch (err) { setError(extractErr(err, 'Failed to add company.')); }
@@ -154,6 +157,7 @@ function CompaniesPanel({ onDrillInto, setFlash }) {
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">City</th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3" />
             </tr>
@@ -166,6 +170,9 @@ function CompaniesPanel({ onDrillInto, setFlash }) {
                     className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition text-left">
                     {c.companyName} ›
                   </button>
+                </td>
+                <td className="px-6 py-3 text-gray-600 dark:text-gray-400 text-sm">
+                  {c.cityName || <span className="text-gray-400 dark:text-gray-500 italic">—</span>}
                 </td>
                 <td className="px-6 py-3">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
@@ -188,7 +195,14 @@ function CompaniesPanel({ onDrillInto, setFlash }) {
         <form onSubmit={handleCreate} className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name<span className="text-red-500 ml-0.5">*</span></label>
-            <input value={form.companyName} onChange={(e) => setForm({ companyName: e.target.value })} required placeholder="e.g. MECS Cable" className={`${INPUT} w-64`} />
+            <input value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} required placeholder="e.g. MECS Cable" className={`${INPUT} w-64`} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
+            <select value={form.cityId} onChange={(e) => setForm((f) => ({ ...f, cityId: e.target.value }))} className={`${INPUT} w-48`}>
+              <option value="">Select city…</option>
+              {cities.map((c) => <option key={c.cityId} value={c.cityId}>{c.cityName}</option>)}
+            </select>
           </div>
           <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
             {loading ? 'Adding…' : 'Add Company'}
@@ -198,7 +212,7 @@ function CompaniesPanel({ onDrillInto, setFlash }) {
 
       {editTarget && (
         <Modal title={`Edit — ${editTarget.companyName}`} onClose={() => setEditTarget(null)}>
-          <EditCompanyForm company={editTarget}
+          <EditCompanyForm company={editTarget} cities={cities}
             onSuccess={(name) => { setEditTarget(null); setFlash(`Company "${name}" updated.`); reload(); }}
             onClose={() => setEditTarget(null)} />
         </Modal>
@@ -213,14 +227,14 @@ function CompaniesPanel({ onDrillInto, setFlash }) {
   );
 }
 
-function EditCompanyForm({ company, onSuccess, onClose }) {
-  const [form, setForm] = useState({ companyName: company.companyName, active: company.active });
+function EditCompanyForm({ company, cities, onSuccess, onClose }) {
+  const [form, setForm] = useState({ companyName: company.companyName, active: company.active, cityId: company.cityId ? String(company.cityId) : '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await updateCompany(company.companyId, { companyName: form.companyName.trim(), active: form.active });
+      await updateCompany(company.companyId, { companyName: form.companyName.trim(), active: form.active, cityId: form.cityId ? Number(form.cityId) : null });
       onSuccess(form.companyName.trim());
     } catch (err) { setError(extractErr(err, 'Failed to update.')); }
     finally { setLoading(false); }
@@ -232,6 +246,13 @@ function EditCompanyForm({ company, onSuccess, onClose }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name<span className="text-red-500 ml-0.5">*</span></label>
           <input value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} required className={INPUT} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
+          <select value={form.cityId} onChange={(e) => setForm((f) => ({ ...f, cityId: e.target.value }))} className={INPUT}>
+            <option value="">Select city…</option>
+            {cities.map((c) => <option key={c.cityId} value={c.cityId}>{c.cityName}</option>)}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <input type="checkbox" id="co-active" checked={form.active} onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))} className="rounded" />
@@ -246,160 +267,8 @@ function EditCompanyForm({ company, onSuccess, onClose }) {
   );
 }
 
-// ── Cities panel ──────────────────────────────────────────────
-function CitiesPanel({ company, onDrillInto, setFlash }) {
-  const [items, setItems] = useState(null);
-  const [form, setForm] = useState({ cityName: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [editTarget, setEditTarget] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [unassigned, setUnassigned] = useState([]);
-  const [assignCityId, setAssignCityId] = useState('');
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [assignError, setAssignError] = useState('');
-
-  const reload = () => {
-    getCities(company.companyId).then((r) => setItems(r.data)).catch(() => setItems([]));
-    getCities().then((r) => setUnassigned(r.data.filter((c) => !c.companyId))).catch(() => setUnassigned([]));
-  };
-  useEffect(() => { reload(); }, [company.companyId]);
-
-  const handleCreate = async (e) => {
-    e.preventDefault(); setLoading(true); setError('');
-    try {
-      await createCity({ cityName: form.cityName.trim(), companyId: company.companyId });
-      setForm({ cityName: '' });
-      setFlash(`City "${form.cityName}" added.`);
-      reload();
-    } catch (err) { setError(extractErr(err, 'Failed to add city.')); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <Panel title="Cities" badge={company.companyName}>
-      {items === null ? <Skeleton /> : items.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No cities linked to this company yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-              <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">City</th>
-              <th className="px-6 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-            {items.map((c) => (
-              <tr key={c.cityId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td className="px-6 py-3">
-                  <button onClick={() => onDrillInto(c)}
-                    className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition text-left">
-                    {c.cityName} ›
-                  </button>
-                </td>
-                <td className="px-6 py-3 text-right">
-                  <button onClick={() => setEditTarget(c)} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition mr-3">Edit</button>
-                  <button onClick={() => setDeleteTarget(c)} className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition">Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <div className="p-6 border-t border-gray-100 dark:border-gray-700 space-y-5">
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Add City to {company.companyName}</h3>
-          <ErrorMsg msg={error} />
-          <form onSubmit={handleCreate} className="flex flex-wrap gap-3 items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City Name<span className="text-red-500 ml-0.5">*</span></label>
-              <input value={form.cityName} onChange={(e) => setForm({ cityName: e.target.value })} required placeholder="e.g. Madurai" className={`${INPUT} w-64`} />
-            </div>
-            <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
-              {loading ? 'Adding…' : 'Add City'}
-            </button>
-          </form>
-        </div>
-
-        {unassigned.length > 0 && (
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Assign Existing City to {company.companyName}</h3>
-            <ErrorMsg msg={assignError} />
-            <form onSubmit={async (e) => {
-              e.preventDefault(); setAssignLoading(true); setAssignError('');
-              const city = unassigned.find((c) => c.cityId === Number(assignCityId));
-              try {
-                await updateCity(Number(assignCityId), { cityName: city.cityName, companyId: company.companyId });
-                setAssignCityId('');
-                setFlash(`City "${city.cityName}" assigned to ${company.companyName}.`);
-                reload();
-              } catch (err) { setAssignError(extractErr(err, 'Failed to assign city.')); }
-              finally { setAssignLoading(false); }
-            }} className="flex flex-wrap gap-3 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City<span className="text-red-500 ml-0.5">*</span></label>
-                <select value={assignCityId} onChange={(e) => setAssignCityId(e.target.value)} required className={`${INPUT} w-64`}>
-                  <option value="">Select unassigned city…</option>
-                  {unassigned.map((c) => <option key={c.cityId} value={c.cityId}>{c.cityName}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={assignLoading || !assignCityId} className="bg-green-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-green-800 transition disabled:opacity-50">
-                {assignLoading ? 'Assigning…' : 'Assign City'}
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
-
-      {editTarget && (
-        <Modal title={`Edit — ${editTarget.cityName}`} onClose={() => setEditTarget(null)}>
-          <EditCityForm city={editTarget} companyId={company.companyId}
-            onSuccess={(name) => { setEditTarget(null); setFlash(`City "${name}" updated.`); reload(); }}
-            onClose={() => setEditTarget(null)} />
-        </Modal>
-      )}
-      {deleteTarget && (
-        <DeleteModal title="Delete City" message={`Delete city "${deleteTarget.cityName}"? This cannot be undone.`}
-          onConfirm={() => deleteCity(deleteTarget.cityId)}
-          onClose={() => setDeleteTarget(null)}
-          onSuccess={() => { setDeleteTarget(null); setFlash(`City "${deleteTarget.cityName}" deleted.`); reload(); }} />
-      )}
-    </Panel>
-  );
-}
-
-function EditCityForm({ city, companyId, onSuccess, onClose }) {
-  const [name, setName] = useState(city.cityName);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); setError('');
-    try {
-      await updateCity(city.cityId, { cityName: name.trim(), companyId });
-      onSuccess(name.trim());
-    } catch (err) { setError(extractErr(err, 'Failed to update.')); }
-    finally { setLoading(false); }
-  };
-  return (
-    <>
-      <ErrorMsg msg={error} />
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City Name<span className="text-red-500 ml-0.5">*</span></label>
-          <input value={name} onChange={(e) => setName(e.target.value)} required className={INPUT} />
-        </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="text-sm font-medium text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 transition">Cancel</button>
-          <button type="submit" disabled={loading} className="bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">{loading ? 'Saving…' : 'Save Changes'}</button>
-        </div>
-      </form>
-    </>
-  );
-}
-
 // ── Groups panel ──────────────────────────────────────────────
-function GroupsPanel({ company, city, onDrillInto, setFlash }) {
+function GroupsPanel({ company, onDrillInto, setFlash }) {
   const [items, setItems] = useState(null);
   const [form, setForm] = useState({ groupName: '' });
   const [loading, setLoading] = useState(false);
@@ -409,14 +278,14 @@ function GroupsPanel({ company, city, onDrillInto, setFlash }) {
 
   const reload = () =>
     getGroups(company.companyId)
-      .then((r) => setItems(r.data.filter((g) => g.cityId === city.cityId)))
+      .then((r) => setItems(r.data))
       .catch(() => setItems([]));
-  useEffect(() => { reload(); }, [company.companyId, city.cityId]);
+  useEffect(() => { reload(); }, [company.companyId]);
 
   const handleCreate = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await createGroup({ companyId: company.companyId, cityId: city.cityId, groupName: form.groupName.trim() });
+      await createGroup({ companyId: company.companyId, groupName: form.groupName.trim() });
       setForm({ groupName: '' });
       setFlash(`Group "${form.groupName}" added.`);
       reload();
@@ -425,9 +294,9 @@ function GroupsPanel({ company, city, onDrillInto, setFlash }) {
   };
 
   return (
-    <Panel title="Groups" badge={`${company.companyName} › ${city.cityName}`}>
+    <Panel title="Groups" badge={company.companyName}>
       {items === null ? <Skeleton /> : items.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No groups in this city yet.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 px-6 py-5">No groups yet.</p>
       ) : (
         <table className="w-full text-sm">
           <thead>
@@ -471,7 +340,7 @@ function GroupsPanel({ company, city, onDrillInto, setFlash }) {
 
       {editTarget && (
         <Modal title={`Edit — ${editTarget.groupName}`} onClose={() => setEditTarget(null)}>
-          <EditGroupForm group={editTarget} company={company} city={city}
+          <EditGroupForm group={editTarget} company={company}
             onSuccess={(name) => { setEditTarget(null); setFlash(`Group "${name}" updated.`); reload(); }}
             onClose={() => setEditTarget(null)} />
         </Modal>
@@ -486,14 +355,14 @@ function GroupsPanel({ company, city, onDrillInto, setFlash }) {
   );
 }
 
-function EditGroupForm({ group, company, city, onSuccess, onClose }) {
+function EditGroupForm({ group, company, onSuccess, onClose }) {
   const [name, setName] = useState(group.groupName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await updateGroup(group.groupId, { companyId: company.companyId, cityId: city.cityId, groupName: name.trim() });
+      await updateGroup(group.groupId, { companyId: company.companyId, groupName: name.trim() });
       onSuccess(name.trim());
     } catch (err) { setError(extractErr(err, 'Failed to update.')); }
     finally { setLoading(false); }
@@ -902,7 +771,6 @@ function AssignAreasModal({ employee, availableAreas, onClose, onSuccess }) {
 export default function Organisation() {
   const [level, setLevel] = useState('companies');
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [selectedCity, setSelectedCity] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [flash, setFlash] = useState('');
@@ -915,28 +783,25 @@ export default function Organisation() {
 
   const navigate = (targetLevel) => {
     setLevel(targetLevel);
-    if (targetLevel === 'companies') { setSelectedCompany(null); setSelectedCity(null); setSelectedGroup(null); setSelectedEmployee(null); }
-    else if (targetLevel === 'cities') { setSelectedCity(null); setSelectedGroup(null); setSelectedEmployee(null); }
+    if (targetLevel === 'companies') { setSelectedCompany(null); setSelectedGroup(null); setSelectedEmployee(null); }
     else if (targetLevel === 'groups') { setSelectedGroup(null); setSelectedEmployee(null); }
     else if (targetLevel === 'employees') { setSelectedEmployee(null); }
   };
 
-  const drillCompany = (company) => { setSelectedCompany(company); setLevel('cities'); };
-  const drillCity = (city) => { setSelectedCity(city); setLevel('groups'); };
+  const drillCompany = (company) => { setSelectedCompany(company); setLevel('groups'); };
   const drillGroup = (group) => { setSelectedGroup(group); setLevel('employees'); };
   const drillEmployee = (emp) => { setSelectedEmployee(emp); setLevel('employee-detail'); };
 
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Manage Organisation</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Manage companies, cities, groups, employees, and their area assignments.</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Manage companies, groups, employees, and their area assignments.</p>
 
       <SuccessMsg msg={flash} />
 
       <Breadcrumb
         level={level}
         company={selectedCompany}
-        city={selectedCity}
         group={selectedGroup}
         employee={selectedEmployee}
         onNavigate={navigate}
@@ -945,11 +810,8 @@ export default function Organisation() {
       {level === 'companies' && (
         <CompaniesPanel onDrillInto={drillCompany} setFlash={setFlash} />
       )}
-      {level === 'cities' && selectedCompany && (
-        <CitiesPanel company={selectedCompany} onDrillInto={drillCity} setFlash={setFlash} />
-      )}
-      {level === 'groups' && selectedCompany && selectedCity && (
-        <GroupsPanel company={selectedCompany} city={selectedCity} onDrillInto={drillGroup} setFlash={setFlash} />
+      {level === 'groups' && selectedCompany && (
+        <GroupsPanel company={selectedCompany} onDrillInto={drillGroup} setFlash={setFlash} />
       )}
       {level === 'employees' && selectedGroup && (
         <EmployeesPanel group={selectedGroup} onDrillInto={drillEmployee} setFlash={setFlash} />

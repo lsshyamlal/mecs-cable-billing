@@ -3,6 +3,7 @@ package com.mecscable.billing.service;
 import com.mecscable.billing.dto.request.CreateCompanyRequest;
 import com.mecscable.billing.dto.request.UpdateCompanyRequest;
 import com.mecscable.billing.dto.response.CompanyResponse;
+import com.mecscable.billing.entity.City;
 import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.CityRepository;
@@ -49,6 +50,11 @@ public class CompanyService {
         }
         Company company = new Company();
         company.setCompanyName(name);
+        if (request.cityId() != null) {
+            City city = cityRepository.findById(request.cityId())
+                    .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
+            company.setCity(city);
+        }
         company = companyRepository.save(company);
         auditService.log(adminId, "CREATE_COMPANY", "Company", company.getCompanyId(), null);
         return toResponse(company);
@@ -64,6 +70,11 @@ public class CompanyService {
         }
         company.setCompanyName(name);
         company.setActive(request.active());
+        if (request.cityId() != null) {
+            City city = cityRepository.findById(request.cityId())
+                    .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
+            company.setCity(city);
+        }
         company = companyRepository.save(company);
         auditService.log(adminId, "UPDATE_COMPANY", "Company", company.getCompanyId(), null);
         return toResponse(company);
@@ -72,11 +83,6 @@ public class CompanyService {
     @Transactional
     public void deleteCompany(Long id, Long adminId) {
         Company company = findCompany(id);
-        long cityCount = cityRepository.findByCompanyOrderByCityNameAsc(company).size();
-        if (cityCount > 0) {
-            throw new IllegalArgumentException(
-                    "Cannot delete company — " + cityCount + " city/cities are still linked to it");
-        }
         long groupCount = groupRepository.findByCompanyOrderByGroupNameAsc(company).size();
         if (groupCount > 0) {
             throw new IllegalArgumentException(
@@ -92,6 +98,14 @@ public class CompanyService {
     }
 
     private CompanyResponse toResponse(Company c) {
-        return new CompanyResponse(c.getCompanyId(), c.getCompanyName(), c.isActive(), c.getCreatedAt());
+        City city = c.getCity();
+        return new CompanyResponse(
+                c.getCompanyId(),
+                c.getCompanyName(),
+                c.isActive(),
+                city != null ? city.getCityId() : null,
+                city != null ? city.getCityName() : null,
+                c.getCreatedAt()
+        );
     }
 }

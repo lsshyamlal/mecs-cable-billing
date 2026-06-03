@@ -1,6 +1,5 @@
 package com.mecscable.billing.repository;
 
-import com.mecscable.billing.entity.City;
 import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.entity.EmployeeGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,9 +10,5 @@ public interface EmployeeGroupRepository extends JpaRepository<EmployeeGroup, Lo
 
     List<EmployeeGroup> findByCompanyOrderByGroupNameAsc(Company company);
 
-    List<EmployeeGroup> findByCityOrderByGroupNameAsc(City city);
-
-    boolean existsByCompanyAndCityAndGroupNameIgnoreCase(Company company, City city, String groupName);
-
-    long countByCity(City city);
+    boolean existsByCompanyAndGroupNameIgnoreCase(Company company, String groupName);
 }
