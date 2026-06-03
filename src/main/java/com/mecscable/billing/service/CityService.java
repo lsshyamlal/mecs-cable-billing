@@ -9,6 +9,7 @@ import com.mecscable.billing.repository.AreaRepository;
 import com.mecscable.billing.repository.CityRepository;
 import com.mecscable.billing.repository.CompanyRepository;
 import com.mecscable.billing.repository.CustomerRepository;
+import com.mecscable.billing.repository.EmployeeGroupRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +23,20 @@ public class CityService {
     private final AreaRepository areaRepository;
     private final CustomerRepository customerRepository;
     private final CompanyRepository companyRepository;
+    private final EmployeeGroupRepository employeeGroupRepository;
     private final AuditService auditService;
 
     public CityService(CityRepository cityRepository,
                        AreaRepository areaRepository,
                        CustomerRepository customerRepository,
                        CompanyRepository companyRepository,
+                       EmployeeGroupRepository employeeGroupRepository,
                        AuditService auditService) {
         this.cityRepository = cityRepository;
         this.areaRepository = areaRepository;
         this.customerRepository = customerRepository;
         this.companyRepository = companyRepository;
+        this.employeeGroupRepository = employeeGroupRepository;
         this.auditService = auditService;
     }
 
@@ -101,6 +105,11 @@ public class CityService {
         if (customerCount > 0) {
             throw new IllegalArgumentException(
                     "Cannot delete city — " + customerCount + " customer(s) still belong to it");
+        }
+        long groupCount = employeeGroupRepository.countByCity(city);
+        if (groupCount > 0) {
+            throw new IllegalArgumentException(
+                    "Cannot delete city — " + groupCount + " employee group(s) still belong to it");
         }
         cityRepository.delete(city);
         auditService.log(adminId, "DELETE_CITY", "City", id, null);

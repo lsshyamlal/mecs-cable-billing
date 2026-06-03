@@ -14,4 +14,6 @@ public interface EmployeeGroupRepository extends JpaRepository<EmployeeGroup, Lo
     List<EmployeeGroup> findByCityOrderByGroupNameAsc(City city);
 
     boolean existsByCompanyAndCityAndGroupNameIgnoreCase(Company company, City city, String groupName);
+
+    long countByCity(City city);
 }
