@@ -243,23 +243,27 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Company</label>
-              <select value={companyId} onChange={(e) => handleCompanyChange(e.target.value)} className={SELECT_CLS}>
-                <option value="">All Companies</option>
-                {companies.filter((c) => c.active).map((c) => (
-                  <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
-                ))}
-                {companies.some((c) => !c.active) && (
-                  <optgroup label="Inactive">
-                    {companies.filter((c) => !c.active).map((c) => (
-                      <option key={c.companyId} value={c.companyId}>{c.companyName} (Inactive)</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
+          <div className="mb-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/20 p-4">
+            <label className="block text-sm font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-2">Company</label>
+            <select
+              value={companyId}
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              className="w-full border-2 border-blue-300 dark:border-blue-700 rounded-lg px-4 py-3 text-base font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Companies</option>
+              {companies.filter((c) => c.active).map((c) => (
+                <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
+              ))}
+              {companies.some((c) => !c.active) && (
+                <optgroup label="Inactive">
+                  {companies.filter((c) => !c.active).map((c) => (
+                    <option key={c.companyId} value={c.companyId}>{c.companyName} (Inactive)</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">City</label>
               <select value={cityId} onChange={(e) => handleCityChange(e.target.value)} className={SELECT_CLS}>
