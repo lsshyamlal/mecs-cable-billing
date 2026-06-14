@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
-import { createCustomer, getCities, getAreas, getStreets } from '../../api';
+import { createCustomer, getCities, getAreas, getStreets, getCompanies } from '../../api';
 
 function Field({ label, required, children }) {
   return (
@@ -18,13 +18,14 @@ const INPUT = 'w-full border border-gray-300 dark:border-gray-600 rounded-lg px-
 
 export default function CustomerForm() {
   const navigate = useNavigate();
+  const [companies, setCompanies] = useState([]);
   const [cities, setCities] = useState([]);
   const [areas, setAreas] = useState([]);
   const [streets, setStreets] = useState([]);
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
     upiId: '', stbId: '', doorNumber: '',
-    cityId: '', areaId: '', streetId: '',
+    companyId: '', cityId: '', areaId: '', streetId: '',
     subscriptionStartDate: '',
     monthlyRate: '',
     portalPassword: '',
@@ -34,19 +35,29 @@ export default function CustomerForm() {
   const [showPortalPassword, setShowPortalPassword] = useState(false);
 
   useEffect(() => {
+    getCompanies().then((r) => setCompanies(r.data.filter((c) => c.active))).catch(() => {});
     getCities().then((r) => setCities(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
     getStreets().then((r) => setStreets(r.data)).catch(() => {});
   }, []);
 
+  const selectedCompany = companies.find((c) => String(c.companyId) === form.companyId);
+  const companyCityIds = selectedCompany
+    ? new Set((selectedCompany.cities || []).map((c) => c.cityId))
+    : null;
+  const filteredCities = companyCityIds
+    ? cities.filter((c) => companyCityIds.has(c.cityId))
+    : cities;
   const filteredAreas = form.cityId
     ? areas.filter((a) => String(a.cityId) === form.cityId)
-    : areas;
+    : [];
   const filteredStreets = form.areaId
     ? streets.filter((s) => String(s.areaId) === form.areaId)
     : [];
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const onCompanyChange = (e) =>
+    setForm((f) => ({ ...f, companyId: e.target.value, cityId: '', areaId: '', streetId: '' }));
   const onCityChange = (e) =>
     setForm((f) => ({ ...f, cityId: e.target.value, areaId: '', streetId: '' }));
   const onAreaChange = (e) =>
@@ -64,6 +75,7 @@ export default function CustomerForm() {
         upiId: form.upiId || null,
         stbId: form.stbId || null,
         doorNumber: form.doorNumber || null,
+        companyId: form.companyId ? Number(form.companyId) : null,
         areaId: form.areaId ? Number(form.areaId) : null,
         streetId: form.streetId ? Number(form.streetId) : null,
         subscriptionStartDate: form.subscriptionStartDate || null,
@@ -99,6 +111,20 @@ export default function CustomerForm() {
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Company</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Company" required>
+              <select name="companyId" value={form.companyId} onChange={onCompanyChange} required className={INPUT}>
+                <option value="">Select company…</option>
+                {companies.map((c) => (
+                  <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Personal Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="First Name" required>
@@ -126,9 +152,16 @@ export default function CustomerForm() {
           <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Address</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="City" required>
-              <select name="cityId" value={form.cityId} onChange={onCityChange} required className={INPUT}>
-                <option value="">Select city…</option>
-                {cities.map((c) => (
+              <select
+                name="cityId"
+                value={form.cityId}
+                onChange={onCityChange}
+                required
+                disabled={!form.companyId}
+                className={`${INPUT} ${!form.companyId ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <option value="">{form.companyId ? 'Select city…' : 'Pick company first'}</option>
+                {filteredCities.map((c) => (
                   <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
                 ))}
               </select>
