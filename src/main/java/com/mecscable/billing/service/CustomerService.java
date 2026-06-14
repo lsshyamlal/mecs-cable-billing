@@ -79,7 +79,7 @@ public class CustomerService {
         } else if (cityId != null) {
             customers = customerRepository.findByAreaCity(findCity(cityId));
         } else if (companyId != null) {
-            customers = customerRepository.findByAreaCityCompanyId(companyId);
+            customers = customerRepository.findByCompany_CompanyId(companyId);
         } else if (!isSubscriptionStatus && futureStatus == null && status != null) {
             customers = customerRepository.findByStatus(CustomerStatus.valueOf(status));
         } else {

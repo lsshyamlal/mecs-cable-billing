@@ -2,22 +2,21 @@ package com.mecscable.billing.repository;
 
 import com.mecscable.billing.entity.Area;
 import com.mecscable.billing.entity.City;
-import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.entity.Customer;
 import com.mecscable.billing.entity.CustomerStatus;
 import com.mecscable.billing.entity.Street;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    @Query("SELECT c FROM Customer c WHERE c.area.city IN " +
-           "(SELECT ci FROM Company co JOIN co.cities ci WHERE co.companyId = :companyId)")
-    List<Customer> findByAreaCityCompanyId(@Param("companyId") Long companyId);
+    // Customers are pinned to a specific company via customers.company_id (V26),
+    // so filtering by company is now a direct FK lookup. The legacy
+    // area.city -> company.cities path returned cross-company leakage when
+    // multiple companies served the same city.
+    List<Customer> findByCompany_CompanyId(Long companyId);
 
     List<Customer> findByStatus(CustomerStatus status);
 

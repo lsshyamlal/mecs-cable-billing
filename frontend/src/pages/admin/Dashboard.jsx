@@ -79,9 +79,17 @@ export default function Dashboard() {
   }, []);
 
   // Cascading dropdown options
+  // City ↔ company is now many-to-many — a city no longer carries a single companyId.
+  // Resolve the company's served city IDs via companies[].cities.
+  const companyCityIds = useMemo(() => {
+    if (!companyId) return null;
+    const co = companies.find((c) => String(c.companyId) === companyId);
+    return new Set((co?.cities || []).map((c) => c.cityId));
+  }, [companies, companyId]);
+
   const availableCities = useMemo(
-    () => (companyId ? cities.filter((c) => String(c.companyId) === companyId) : cities),
-    [cities, companyId]
+    () => (companyCityIds ? cities.filter((c) => companyCityIds.has(c.cityId)) : cities),
+    [cities, companyCityIds]
   );
 
   const availableGroups = useMemo(() => {
@@ -119,14 +127,11 @@ export default function Dashboard() {
     }
     if (cityId) {
       a = a.filter((x) => String(x.cityId) === cityId);
-    } else if (companyId) {
-      const cityIdsInCo = new Set(
-        cities.filter((c) => String(c.companyId) === companyId).map((c) => c.cityId)
-      );
-      a = a.filter((x) => cityIdsInCo.has(x.cityId));
+    } else if (companyCityIds) {
+      a = a.filter((x) => companyCityIds.has(x.cityId));
     }
     return a;
-  }, [areas, cities, employees, companyId, cityId, groupId, employeeId]);
+  }, [areas, employees, companyCityIds, cityId, groupId, employeeId]);
 
   // Apply hierarchy filter to customers (client-side, since the listCustomers API
   // doesn't accept companyId / groupId / employeeId).
@@ -145,15 +150,10 @@ export default function Dashboard() {
         return assigned.has(c.areaId);
       }
       if (cityId) return String(c.cityId) === cityId;
-      if (companyId) {
-        const cityIdsInCo = new Set(
-          cities.filter((ct) => String(ct.companyId) === companyId).map((ct) => ct.cityId)
-        );
-        return cityIdsInCo.has(c.cityId);
-      }
+      if (companyId) return String(c.companyId) === companyId;
       return true;
     });
-  }, [customers, cities, employees, companyId, cityId, groupId, employeeId, areaId]);
+  }, [customers, employees, companyId, cityId, groupId, employeeId, areaId]);
 
   const countFor = (defs, field) =>
     filteredCustomers
