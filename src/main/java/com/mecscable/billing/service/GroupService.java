@@ -2,9 +2,11 @@ package com.mecscable.billing.service;
 
 import com.mecscable.billing.dto.request.CreateGroupRequest;
 import com.mecscable.billing.dto.response.GroupResponse;
+import com.mecscable.billing.entity.City;
 import com.mecscable.billing.entity.Company;
 import com.mecscable.billing.entity.EmployeeGroup;
 import com.mecscable.billing.exception.ResourceNotFoundException;
+import com.mecscable.billing.repository.CityRepository;
 import com.mecscable.billing.repository.CompanyRepository;
 import com.mecscable.billing.repository.EmployeeGroupRepository;
 import com.mecscable.billing.repository.EmployeeRepository;
@@ -19,15 +21,18 @@ public class GroupService {
 
     private final EmployeeGroupRepository groupRepository;
     private final CompanyRepository companyRepository;
+    private final CityRepository cityRepository;
     private final EmployeeRepository employeeRepository;
     private final AuditService auditService;
 
     public GroupService(EmployeeGroupRepository groupRepository,
                         CompanyRepository companyRepository,
+                        CityRepository cityRepository,
                         EmployeeRepository employeeRepository,
                         AuditService auditService) {
         this.groupRepository = groupRepository;
         this.companyRepository = companyRepository;
+        this.cityRepository = cityRepository;
         this.employeeRepository = employeeRepository;
         this.auditService = auditService;
     }
@@ -51,14 +56,17 @@ public class GroupService {
     public GroupResponse createGroup(CreateGroupRequest request, Long adminId) {
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + request.companyId()));
+        City city = cityRepository.findById(request.cityId())
+                .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
 
         String name = request.groupName().trim();
-        if (groupRepository.existsByCompanyAndGroupNameIgnoreCase(company, name)) {
-            throw new IllegalArgumentException("Group already exists in this company: " + name);
+        if (groupRepository.existsByCompanyAndCityAndGroupNameIgnoreCase(company, city, name)) {
+            throw new IllegalArgumentException("Group already exists in this company+city: " + name);
         }
 
         EmployeeGroup group = new EmployeeGroup();
         group.setCompany(company);
+        group.setCity(city);
         group.setGroupName(name);
         group = groupRepository.save(group);
         auditService.log(adminId, "CREATE_GROUP", "EmployeeGroup", group.getGroupId(), null);
@@ -70,15 +78,19 @@ public class GroupService {
         EmployeeGroup group = findGroup(id);
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + request.companyId()));
+        City city = cityRepository.findById(request.cityId())
+                .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
 
         String name = request.groupName().trim();
         boolean changed = !group.getGroupName().equalsIgnoreCase(name)
-                || !group.getCompany().getCompanyId().equals(company.getCompanyId());
-        if (changed && groupRepository.existsByCompanyAndGroupNameIgnoreCase(company, name)) {
-            throw new IllegalArgumentException("Group already exists in this company: " + name);
+                || !group.getCompany().getCompanyId().equals(company.getCompanyId())
+                || !java.util.Objects.equals(group.getCity() != null ? group.getCity().getCityId() : null, city.getCityId());
+        if (changed && groupRepository.existsByCompanyAndCityAndGroupNameIgnoreCase(company, city, name)) {
+            throw new IllegalArgumentException("Group already exists in this company+city: " + name);
         }
 
         group.setCompany(company);
+        group.setCity(city);
         group.setGroupName(name);
         group = groupRepository.save(group);
         auditService.log(adminId, "UPDATE_GROUP", "EmployeeGroup", group.getGroupId(), null);
@@ -103,10 +115,13 @@ public class GroupService {
     }
 
     private GroupResponse toResponse(EmployeeGroup g) {
+        City city = g.getCity();
         return new GroupResponse(
                 g.getGroupId(),
                 g.getCompany().getCompanyId(),
                 g.getCompany().getCompanyName(),
+                city != null ? city.getCityId() : null,
+                city != null ? city.getCityName() : null,
                 g.getGroupName(),
                 g.getCreatedAt()
         );

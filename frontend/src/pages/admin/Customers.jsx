@@ -67,7 +67,8 @@ export default function Customers() {
   const filteredCities = useMemo(() => {
     if (!companyFilter) return cities;
     const co = companies.find((c) => String(c.companyId) === companyFilter);
-    return co?.cityId ? cities.filter((c) => c.cityId === co.cityId) : cities;
+    const linkedIds = new Set((co?.cities || []).map((c) => c.cityId));
+    return linkedIds.size > 0 ? cities.filter((c) => linkedIds.has(c.cityId)) : cities;
   }, [cities, companies, companyFilter]);
 
   const filteredGroups = useMemo(() => {
@@ -99,7 +100,8 @@ export default function Customers() {
       a = a.filter((x) => String(x.cityId) === cityFilter);
     } else if (companyFilter) {
       const co = companies.find((c) => String(c.companyId) === companyFilter);
-      if (co?.cityId) a = a.filter((x) => x.cityId === co.cityId);
+      const linkedIds = new Set((co?.cities || []).map((c) => c.cityId));
+      if (linkedIds.size > 0) a = a.filter((x) => linkedIds.has(x.cityId));
     }
     return a;
   }, [areas, companies, employees, companyFilter, cityFilter, groupFilter, employeeFilter]);

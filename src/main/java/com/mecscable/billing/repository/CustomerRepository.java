@@ -15,7 +15,8 @@ import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
-    @Query("SELECT c FROM Customer c JOIN Company co ON co.companyId = :companyId WHERE c.area.city = co.city")
+    @Query("SELECT c FROM Customer c WHERE c.area.city IN " +
+           "(SELECT ci FROM Company co JOIN co.cities ci WHERE co.companyId = :companyId)")
     List<Customer> findByAreaCityCompanyId(@Param("companyId") Long companyId);
 
     List<Customer> findByStatus(CustomerStatus status);

@@ -4,7 +4,5 @@ import jakarta.validation.constraints.NotBlank;
 
 public record CreateCompanyRequest(
         @NotBlank(message = "Company name is required")
-        String companyName,
-
-        Long cityId
+        String companyName
 ) {}

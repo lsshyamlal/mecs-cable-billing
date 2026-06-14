@@ -1,12 +1,12 @@
 package com.mecscable.billing.dto.response;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record CompanyResponse(
         Long companyId,
         String companyName,
         boolean active,
-        Long cityId,
-        String cityName,
+        List<CityResponse> cities,
         OffsetDateTime createdAt
 ) {}

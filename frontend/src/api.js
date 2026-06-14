@@ -130,6 +130,8 @@ export const getCompanies = () => api.get('/companies');
 export const createCompany = (data) => api.post('/companies', data);
 export const updateCompany = (id, data) => api.put(`/companies/${id}`, data);
 export const deleteCompany = (id) => api.delete(`/companies/${id}`);
+export const linkCityToCompany = (id, cityId) => api.post(`/companies/${id}/cities/${cityId}`);
+export const unlinkCityFromCompany = (id, cityId) => api.delete(`/companies/${id}/cities/${cityId}`);
 
 // ── Groups ───────────────────────────────────────────────────
 export const getGroups = (companyId) =>

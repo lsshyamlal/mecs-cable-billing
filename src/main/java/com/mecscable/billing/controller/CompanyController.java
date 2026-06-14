@@ -47,6 +47,20 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.updateCompany(id, request, principal.getUserId()));
     }
 
+    @PostMapping("/{id}/cities/{cityId}")
+    public ResponseEntity<CompanyResponse> linkCity(@PathVariable Long id,
+                                                    @PathVariable Long cityId,
+                                                    @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(companyService.linkCity(id, cityId, principal.getUserId()));
+    }
+
+    @DeleteMapping("/{id}/cities/{cityId}")
+    public ResponseEntity<CompanyResponse> unlinkCity(@PathVariable Long id,
+                                                      @PathVariable Long cityId,
+                                                      @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(companyService.unlinkCity(id, cityId, principal.getUserId()));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCompany(@PathVariable Long id,
                                               @AuthenticationPrincipal UserPrincipal principal) {

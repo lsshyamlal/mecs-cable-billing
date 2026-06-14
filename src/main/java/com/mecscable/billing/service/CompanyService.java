@@ -2,6 +2,7 @@ package com.mecscable.billing.service;
 
 import com.mecscable.billing.dto.request.CreateCompanyRequest;
 import com.mecscable.billing.dto.request.UpdateCompanyRequest;
+import com.mecscable.billing.dto.response.CityResponse;
 import com.mecscable.billing.dto.response.CompanyResponse;
 import com.mecscable.billing.entity.City;
 import com.mecscable.billing.entity.Company;
@@ -50,11 +51,6 @@ public class CompanyService {
         }
         Company company = new Company();
         company.setCompanyName(name);
-        if (request.cityId() != null) {
-            City city = cityRepository.findById(request.cityId())
-                    .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
-            company.setCity(city);
-        }
         company = companyRepository.save(company);
         auditService.log(adminId, "CREATE_COMPANY", "Company", company.getCompanyId(), null);
         return toResponse(company);
@@ -70,13 +66,34 @@ public class CompanyService {
         }
         company.setCompanyName(name);
         company.setActive(request.active());
-        if (request.cityId() != null) {
-            City city = cityRepository.findById(request.cityId())
-                    .orElseThrow(() -> new ResourceNotFoundException("City not found: " + request.cityId()));
-            company.setCity(city);
-        }
         company = companyRepository.save(company);
         auditService.log(adminId, "UPDATE_COMPANY", "Company", company.getCompanyId(), null);
+        return toResponse(company);
+    }
+
+    @Transactional
+    public CompanyResponse linkCity(Long id, Long cityId, Long adminId) {
+        Company company = findCompany(id);
+        City city = cityRepository.findById(cityId)
+                .orElseThrow(() -> new ResourceNotFoundException("City not found: " + cityId));
+        company.getCities().add(city);
+        company = companyRepository.save(company);
+        auditService.log(adminId, "LINK_CITY", "Company", id, null);
+        return toResponse(company);
+    }
+
+    @Transactional
+    public CompanyResponse unlinkCity(Long id, Long cityId, Long adminId) {
+        Company company = findCompany(id);
+        City city = cityRepository.findById(cityId)
+                .orElseThrow(() -> new ResourceNotFoundException("City not found: " + cityId));
+        if (groupRepository.existsByCompanyAndCity(company, city)) {
+            throw new IllegalArgumentException(
+                    "Cannot remove city — employee groups still exist for this company in that city");
+        }
+        company.getCities().remove(city);
+        company = companyRepository.save(company);
+        auditService.log(adminId, "UNLINK_CITY", "Company", id, null);
         return toResponse(company);
     }
 
@@ -98,14 +115,10 @@ public class CompanyService {
     }
 
     private CompanyResponse toResponse(Company c) {
-        City city = c.getCity();
-        return new CompanyResponse(
-                c.getCompanyId(),
-                c.getCompanyName(),
-                c.isActive(),
-                city != null ? city.getCityId() : null,
-                city != null ? city.getCityName() : null,
-                c.getCreatedAt()
-        );
+        List<CityResponse> cities = c.getCities().stream()
+                .map(city -> new CityResponse(city.getCityId(), city.getCityName()))
+                .sorted((a, b) -> a.cityName().compareToIgnoreCase(b.cityName()))
+                .toList();
+        return new CompanyResponse(c.getCompanyId(), c.getCompanyName(), c.isActive(), cities, c.getCreatedAt());
     }
 }

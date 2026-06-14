@@ -6,8 +6,8 @@ import com.mecscable.billing.entity.City;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.AreaRepository;
 import com.mecscable.billing.repository.CityRepository;
-import com.mecscable.billing.repository.CompanyRepository;
 import com.mecscable.billing.repository.CustomerRepository;
+import com.mecscable.billing.repository.EmployeeGroupRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,18 +20,18 @@ public class CityService {
     private final CityRepository cityRepository;
     private final AreaRepository areaRepository;
     private final CustomerRepository customerRepository;
-    private final CompanyRepository companyRepository;
+    private final EmployeeGroupRepository groupRepository;
     private final AuditService auditService;
 
     public CityService(CityRepository cityRepository,
                        AreaRepository areaRepository,
                        CustomerRepository customerRepository,
-                       CompanyRepository companyRepository,
+                       EmployeeGroupRepository groupRepository,
                        AuditService auditService) {
         this.cityRepository = cityRepository;
         this.areaRepository = areaRepository;
         this.customerRepository = customerRepository;
-        this.companyRepository = companyRepository;
+        this.groupRepository = groupRepository;
         this.auditService = auditService;
     }
 
@@ -72,10 +72,10 @@ public class CityService {
     @Transactional
     public void deleteCity(Long id, Long adminId) {
         City city = findCity(id);
-        long companyCount = companyRepository.countByCity(city);
-        if (companyCount > 0) {
+        long groupCount = groupRepository.countByCity(city);
+        if (groupCount > 0) {
             throw new IllegalArgumentException(
-                    "Cannot delete city — " + companyCount + " company(ies) still operate in it");
+                    "Cannot delete city — " + groupCount + " employee group(s) still belong to it");
         }
         long areaCount = areaRepository.countByCity(city);
         if (areaCount > 0) {

@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "employee_groups",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"company_id", "group_name"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"company_id", "city_id", "group_name"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,6 +24,10 @@ public class EmployeeGroup {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
 
     @Column(name = "group_name", nullable = false, length = 200)
     private String groupName;
