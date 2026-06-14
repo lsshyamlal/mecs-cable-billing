@@ -245,8 +245,15 @@ public class CustomerService {
         if (!sub.getCustomer().getCustomerId().equals(customerId)) {
             throw new IllegalArgumentException("Subscription does not belong to this customer");
         }
+        if (customer.getStatus() == CustomerStatus.ACCOUNT_CLOSED || customer.getStatus() == CustomerStatus.SUSPENDED) {
+            throw new IllegalArgumentException(
+                    "Cannot deactivate a subscription on a closed or suspended customer account.");
+        }
         if (sub.getStatus() == SubscriptionStatus.SUSPENDED || sub.getStatus() == SubscriptionStatus.CANCELLED) {
             throw new IllegalArgumentException("Subscription is already " + sub.getStatus().name().toLowerCase());
+        }
+        if (sub.getStatus() == SubscriptionStatus.PAID) {
+            throw new IllegalArgumentException("Subscription is already paid and resolved; nothing to deactivate.");
         }
         if (sub.getStatus() == SubscriptionStatus.SCHEDULED) {
             throw new IllegalArgumentException(
@@ -400,6 +407,7 @@ public class CustomerService {
         }
         paymentRepository.deleteAll(paymentRepository.findByCustomerOrderByPaymentDateDesc(customer));
         subscriptionRepository.deleteAll(subscriptionRepository.findByCustomerOrderByStartDateDesc(customer));
+        statusHistoryRepository.deleteAll(statusHistoryRepository.findByCustomerOrderByChangedAtDesc(customer));
         customerRepository.delete(customer);
         auditService.log(adminId, "DELETE_CUSTOMER", "Customer", customerId, null);
     }
