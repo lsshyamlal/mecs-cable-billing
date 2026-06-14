@@ -3,6 +3,7 @@ package com.mecscable.billing.dto.response;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record PaymentResponse(
         Long paymentId,
@@ -20,7 +21,6 @@ public record PaymentResponse(
         String notes,
         OffsetDateTime createdAt,
         String subscriptionStatus,
-        Long packId,
-        String packName,
+        List<PackSummary> packs,
         boolean manualOverride
 ) {}

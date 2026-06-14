@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/AdminLayout';
 import {
-  getCustomer, getCities, getAreas, getStreets, updateCustomer, closeAccount,
+  getCustomer, getCities, getAreas, getStreets, getCompanies, updateCustomer, closeAccount,
   reEnrollCustomer, resetCustomerPassword, recordPayment,
   listPaymentsByCustomer, deleteCustomer, getSubscriptionPacks,
   getCustomerStatusHistory, deactivateSubscription,
@@ -72,15 +72,19 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
   };
   const todayIST = nowIST().substring(0, 10);
   const [form, setForm] = useState({
-    amount: customer.currentPaymentAmount ?? '',
     forMonth: customer.currentSubscriptionStart ?? todayIST.substring(0, 7) + '-01',
     paymentDate: todayIST,
     paymentMethod: '',
     notes: '',
   });
   const [packs, setPacks] = useState([]);
-  const [selectedPackId, setSelectedPackId] = useState('');
-  const packRateRef = useRef(null);
+  const [selectedPackIds, setSelectedPackIds] = useState(() =>
+    new Set((customer.currentPacks ?? []).map((p) => p.packId))
+  );
+  const [manualOverride, setManualOverride] = useState(false);
+  const [manualAmount, setManualAmount] = useState(
+    customer.currentPaymentAmount != null ? String(customer.currentPaymentAmount) : ''
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -88,42 +92,49 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
     getSubscriptionPacks().then((r) => setPacks(r.data)).catch(() => {});
   }, []);
 
+  const packSum = useMemo(() => {
+    if (selectedPackIds.size === 0) return 0;
+    return packs
+      .filter((p) => selectedPackIds.has(p.packId))
+      .reduce((acc, p) => acc + Number(p.monthlyRate), 0);
+  }, [packs, selectedPackIds]);
+
+  const amount = manualOverride ? Number(manualAmount || 0) : packSum;
+
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const onAmountChange = (e) => {
-    setForm((f) => ({ ...f, amount: e.target.value }));
-    if (selectedPackId && selectedPackId !== '__manual__') {
-      setSelectedPackId('__manual__');
-      packRateRef.current = null;
+  const togglePack = (packId) => {
+    setSelectedPackIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(packId)) next.delete(packId);
+      else next.add(packId);
+      return next;
+    });
+  };
+
+  const onManualToggle = (e) => {
+    const next = e.target.checked;
+    setManualOverride(next);
+    if (next) {
+      setSelectedPackIds(new Set());
     }
   };
 
-  const onPackChange = (e) => {
-    const id = e.target.value;
-    setSelectedPackId(id);
-    if (id && id !== '__manual__') {
-      const pack = packs.find((p) => String(p.packId) === id);
-      if (pack) {
-        packRateRef.current = String(pack.monthlyRate);
-        setForm((f) => ({ ...f, amount: String(pack.monthlyRate) }));
-      }
-    } else {
-      packRateRef.current = null;
-    }
-  };
+  const canSubmit = manualOverride
+    ? Number(manualAmount) > 0
+    : selectedPackIds.size > 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canSubmit) return;
     setLoading(true); setError('');
-    const packId = (selectedPackId && selectedPackId !== '__manual__') ? Number(selectedPackId) : null;
-    const manualOverride = selectedPackId === '__manual__';
     try {
       await recordPayment(customer.customerId, {
-        amount: Number(form.amount),
+        amount,
         forMonth: form.forMonth || null,
         paymentMethod: form.paymentMethod || null,
         notes: form.notes || null,
-        packId,
+        packIds: manualOverride ? [] : Array.from(selectedPackIds),
         manualOverride,
       });
       onSuccess();
@@ -140,23 +151,55 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
         <ModalError msg={error} />
         {packs.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pack</label>
-            <select
-              value={selectedPackId}
-              onChange={onPackChange}
-              className={INPUT}
-            >
-              <option value="">Select pack to fill amount…</option>
-              <option value="__manual__">Manual Override</option>
-              {packs.map((p) => (
-                <option key={p.packId} value={p.packId}>
-                  {p.packName} — ₹{Number(p.monthlyRate).toFixed(2)}
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Packs</label>
+            <div className={`space-y-1.5 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 max-h-48 overflow-y-auto ${manualOverride ? 'opacity-50' : ''}`}>
+              {packs.map((p) => {
+                const checked = selectedPackIds.has(p.packId);
+                return (
+                  <label key={p.packId} className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+                    <span className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={manualOverride}
+                        onChange={() => togglePack(p.packId)}
+                        className="rounded"
+                      />
+                      {p.packName}
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400 tabular-nums">
+                      ₹{Number(p.monthlyRate).toFixed(2)}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2 cursor-pointer">
+              <input type="checkbox" checked={manualOverride} onChange={onManualToggle} className="rounded" />
+              Manual override (enter amount directly)
+            </label>
           </div>
         )}
-        <InputRow label="Amount (₹)" name="amount" type="number" value={form.amount} onChange={onAmountChange} required />
+        {manualOverride ? (
+          <InputRow
+            label="Amount (₹)"
+            name="amount"
+            type="number"
+            value={manualAmount}
+            onChange={(e) => setManualAmount(e.target.value)}
+            required
+          />
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (₹)</label>
+            <div className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold tabular-nums">
+              ₹{packSum.toFixed(2)}
+            </div>
+            {selectedPackIds.size === 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Select at least one pack, or switch to manual override.</p>
+            )}
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">For Month<span className="text-red-500 ml-0.5">*</span></label>
           <div className="flex gap-2">
@@ -214,7 +257,7 @@ function RecordPaymentModal({ customer, onClose, onSuccess }) {
           />
         </div>
         <div className="flex gap-2 pt-1">
-          <button type="submit" disabled={loading}
+          <button type="submit" disabled={loading || !canSubmit}
             className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50">
             {loading ? 'Saving…' : 'Record Payment'}
           </button>
@@ -349,11 +392,12 @@ function ResetPasswordModal({ customerId, onClose, onSuccess }) {
 }
 
 // ── Edit Customer Modal ───────────────────────────────────────
-function EditCustomerModal({ customer, cities, areas, streets, onClose, onSuccess }) {
+function EditCustomerModal({ customer, companies, cities, areas, streets, onClose, onSuccess }) {
   const [form, setForm] = useState({
     firstName: customer.firstName || '',
     lastName: customer.lastName || '',
     doorNumber: customer.doorNumber || '',
+    companyId: customer.companyId ? String(customer.companyId) : '',
     cityId: customer.cityId ? String(customer.cityId) : '',
     areaId: customer.areaId ? String(customer.areaId) : '',
     streetId: customer.streetId ? String(customer.streetId) : '',
@@ -366,6 +410,13 @@ function EditCustomerModal({ customer, cities, areas, streets, onClose, onSucces
   const [error, setError] = useState('');
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
+  const selectedCompany = companies.find((c) => String(c.companyId) === form.companyId);
+  const companyCityIds = selectedCompany
+    ? new Set((selectedCompany.cities || []).map((c) => c.cityId))
+    : null;
+  const filteredCities = companyCityIds
+    ? cities.filter((c) => companyCityIds.has(c.cityId))
+    : cities;
   const filteredAreas = form.cityId
     ? areas.filter((a) => String(a.cityId) === form.cityId)
     : areas;
@@ -373,6 +424,8 @@ function EditCustomerModal({ customer, cities, areas, streets, onClose, onSucces
     ? streets.filter((s) => String(s.areaId) === form.areaId)
     : [];
 
+  const onCompanyChange = (e) =>
+    setForm((f) => ({ ...f, companyId: e.target.value, cityId: '', areaId: '', streetId: '' }));
   const onCityChange = (e) =>
     setForm((f) => ({ ...f, cityId: e.target.value, areaId: '', streetId: '' }));
   const onAreaChange = (e) =>
@@ -390,6 +443,7 @@ function EditCustomerModal({ customer, cities, areas, streets, onClose, onSucces
         email: form.email,
         upiId: form.upiId,
         stbId: form.stbId,
+        companyId: form.companyId ? Number(form.companyId) : null,
         areaId: form.areaId ? Number(form.areaId) : null,
         streetId: form.streetId ? Number(form.streetId) : null,
       });
@@ -415,10 +469,26 @@ function EditCustomerModal({ customer, cities, areas, streets, onClose, onSucces
         <InputRow label="STB ID" name="stbId" value={form.stbId} onChange={onChange} />
         <InputRow label="Door No." name="doorNumber" value={form.doorNumber} onChange={onChange} />
         <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company<span className="text-red-500 ml-0.5">*</span></label>
+          <select name="companyId" value={form.companyId} onChange={onCompanyChange} required className={INPUT}>
+            <option value="">Select company…</option>
+            {companies.map((c) => (
+              <option key={c.companyId} value={c.companyId}>{c.companyName}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City<span className="text-red-500 ml-0.5">*</span></label>
-          <select name="cityId" value={form.cityId} onChange={onCityChange} required className={INPUT}>
-            <option value="">Select city…</option>
-            {cities.map((c) => (
+          <select
+            name="cityId"
+            value={form.cityId}
+            onChange={onCityChange}
+            required
+            disabled={!form.companyId}
+            className={`${INPUT} ${!form.companyId ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
+            <option value="">{form.companyId ? 'Select city…' : 'Pick company first'}</option>
+            {filteredCities.map((c) => (
               <option key={c.cityId} value={c.cityId}>{c.cityName}</option>
             ))}
           </select>
@@ -714,6 +784,7 @@ export default function CustomerDetail() {
   const [cities, setCities] = useState([]);
   const [areas, setAreas] = useState([]);
   const [streets, setStreets] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
@@ -729,6 +800,7 @@ export default function CustomerDetail() {
     getCities().then((r) => setCities(r.data)).catch(() => {});
     getAreas().then((r) => setAreas(r.data)).catch(() => {});
     getStreets().then((r) => setStreets(r.data)).catch(() => {});
+    getCompanies().then((r) => setCompanies(r.data.filter((c) => c.active))).catch(() => {});
     reload();
   }, [id]);
 
@@ -824,6 +896,7 @@ export default function CustomerDetail() {
           <Field label="Email" value={customer.email} />
           <Field label="STB ID" value={customer.stbId} />
           <Field label="UPI ID" value={customer.upiId} />
+          <Field label="Company" value={customer.companyName} />
           <Field label="City" value={customer.cityName} />
           <Field label="Area" value={customer.areaName} />
           <Field label="Street" value={customer.streetName} />
@@ -874,8 +947,8 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
             <Field label="Period" value={`${fmtDate(customer.currentSubscriptionStart)} – ${fmtDate(customer.currentSubscriptionEnd)}`} />
             <Field label="Monthly Rate" value={fmtCurrency(customer.currentPaymentAmount)} />
-            {customer.currentPackName && (
-              <Field label="Pack" value={customer.currentPackName} />
+            {customer.currentPacks && customer.currentPacks.length > 0 && (
+              <Field label="Packs" value={customer.currentPacks.map((p) => p.packName).join(', ')} />
             )}
             {customer.subscriptionStatus !== 'PAID' && (
               <Field label="Due Date" value={fmtDate(customer.currentPaymentDueDate)} />
@@ -1014,7 +1087,7 @@ export default function CustomerDetail() {
         <RecordPaymentModal customer={customer} onClose={closeModal} onSuccess={() => onSuccess('Payment recorded.')} />
       )}
       {modal === 'edit' && (
-        <EditCustomerModal customer={customer} cities={cities} areas={areas} streets={streets} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
+        <EditCustomerModal customer={customer} companies={companies} cities={cities} areas={areas} streets={streets} onClose={closeModal} onSuccess={() => onSuccess('Customer updated.')} />
       )}
       {modal === 'reenroll' && (
         <ReEnrollModal customer={customer} customerId={id} onClose={closeModal} onSuccess={() => onSuccess('Customer re-enrolled.')} />

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public record RecordPaymentRequest(
         @NotNull(message = "Amount is required")
@@ -16,6 +17,6 @@ public record RecordPaymentRequest(
 
         String paymentMethod,
         String notes,
-        Long packId,
+        List<Long> packIds,
         Boolean manualOverride
 ) {}

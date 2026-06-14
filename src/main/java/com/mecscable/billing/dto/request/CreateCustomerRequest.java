@@ -13,6 +13,7 @@ public record CreateCustomerRequest(
         String doorNumber,
         Long streetId,
         @NotNull(message = "Area is required") Long areaId,
+        @NotNull(message = "Company is required") Long companyId,
         @NotBlank(message = "Phone is required") String phone,
         String email,
         String upiId,

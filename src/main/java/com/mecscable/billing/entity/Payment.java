@@ -8,6 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "payments")
@@ -46,9 +48,13 @@ public class Payment {
     @JoinColumn(name = "recorded_by_employee")
     private Employee recordedByEmployee;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pack_id")
-    private SubscriptionPack pack;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "payment_packs",
+            joinColumns = @JoinColumn(name = "payment_id"),
+            inverseJoinColumns = @JoinColumn(name = "pack_id")
+    )
+    private Set<SubscriptionPack> packs = new LinkedHashSet<>();
 
     @Column(name = "is_manual_override", nullable = false)
     private boolean manualOverride = false;

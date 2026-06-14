@@ -6,6 +6,7 @@ import com.mecscable.billing.dto.request.EnrollmentRequest;
 import com.mecscable.billing.dto.request.UpdateCustomerRequest;
 import com.mecscable.billing.dto.response.CustomerResponse;
 import com.mecscable.billing.dto.response.CustomerStatusHistoryItem;
+import com.mecscable.billing.dto.response.PackSummary;
 import com.mecscable.billing.entity.*;
 import com.mecscable.billing.exception.ResourceNotFoundException;
 import com.mecscable.billing.repository.*;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Service
@@ -30,6 +32,7 @@ public class CustomerService {
     private final AreaRepository areaRepository;
     private final CityRepository cityRepository;
     private final StreetRepository streetRepository;
+    private final CompanyRepository companyRepository;
     private final AdminRepository adminRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
@@ -42,6 +45,7 @@ public class CustomerService {
                            AreaRepository areaRepository,
                            CityRepository cityRepository,
                            StreetRepository streetRepository,
+                           CompanyRepository companyRepository,
                            AdminRepository adminRepository,
                            SubscriptionRepository subscriptionRepository,
                            PaymentRepository paymentRepository,
@@ -53,6 +57,7 @@ public class CustomerService {
         this.areaRepository = areaRepository;
         this.cityRepository = cityRepository;
         this.streetRepository = streetRepository;
+        this.companyRepository = companyRepository;
         this.adminRepository = adminRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.paymentRepository = paymentRepository;
@@ -114,6 +119,7 @@ public class CustomerService {
     @Transactional
     public CustomerResponse createCustomer(CreateCustomerRequest request, Long adminId) {
         Area area = findArea(request.areaId());
+        Company company = resolveCompanyForArea(request.companyId(), area);
 
         if (request.stbId() != null && !request.stbId().isBlank()) {
             customerRepository.findByStbIdAndStatus(request.stbId(), CustomerStatus.ACTIVE)
@@ -128,6 +134,7 @@ public class CustomerService {
         customer.setLastName(request.lastName());
         customer.setDoorNumber(request.doorNumber());
         customer.setArea(area);
+        customer.setCompany(company);
         if (request.streetId() != null) {
             customer.setStreet(resolveStreetForArea(request.streetId(), area));
         }
@@ -184,6 +191,13 @@ public class CustomerService {
                     && !customer.getStreet().getArea().getAreaId().equals(newArea.getAreaId())) {
                 customer.setStreet(null);
             }
+        }
+
+        if (request.companyId() != null) {
+            customer.setCompany(resolveCompanyForArea(request.companyId(), customer.getArea()));
+        } else if (request.areaId() != null) {
+            // Area changed without an explicit company: re-validate the existing company still serves the new city.
+            resolveCompanyForArea(customer.getCompany().getCompanyId(), customer.getArea());
         }
 
         // streetId: explicit overwrite — null clears, any value re-validates against the area.
@@ -323,7 +337,7 @@ public class CustomerService {
         payment.setPaymentDate(payDate);
         payment.setRecordedBy(admin);
         payment.setNotes("Collected on subscription deactivation: " + notes);
-        payment.setPack(sub.getPack());
+        payment.setPacks(new LinkedHashSet<>(sub.getPacks()));
         payment = paymentRepository.save(payment);
 
         sub.setStatus(SubscriptionStatus.PAID);
@@ -495,6 +509,17 @@ public class CustomerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Street not found: " + streetId));
     }
 
+    private Company resolveCompanyForArea(Long companyId, Area area) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found: " + companyId));
+        boolean servesCity = company.getCities().stream()
+                .anyMatch(ci -> ci.getCityId().equals(area.getCity().getCityId()));
+        if (!servesCity) {
+            throw new IllegalArgumentException("Selected company does not serve this area's city");
+        }
+        return company;
+    }
+
     private Street resolveStreetForArea(Long streetId, Area area) {
         Street street = findStreet(streetId);
         if (!street.getArea().getAreaId().equals(area.getAreaId())) {
@@ -506,8 +531,7 @@ public class CustomerService {
     private CustomerResponse toResponse(Customer c) {
         String subscriptionStatus = null;
         LocalDate gracePeriodDeadline = null;
-        Long currentPackId = null;
-        String currentPackName = null;
+        List<PackSummary> currentPacks = List.of();
         Long currentSubscriptionId = null;
         LocalDate currentSubscriptionDeactivationDate = null;
         if (c.getCurrentSubscriptionStart() != null) {
@@ -515,8 +539,11 @@ public class CustomerService {
             subscriptionStatus = c.getStatus() == CustomerStatus.SUSPENDED
                     ? "SUSPENDED"
                     : currentSub.map(s -> s.getStatus().name()).orElse(null);
-            currentPackId = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackId() : null).orElse(null);
-            currentPackName = currentSub.map(s -> s.getPack() != null ? s.getPack().getPackName() : null).orElse(null);
+            currentPacks = currentSub
+                    .map(s -> s.getPacks().stream()
+                            .map(p -> new PackSummary(p.getPackId(), p.getPackName()))
+                            .toList())
+                    .orElse(List.of());
             currentSubscriptionId = currentSub.map(Subscription::getSubscriptionId).orElse(null);
             currentSubscriptionDeactivationDate = currentSub.map(Subscription::getDeactivationDate).orElse(null);
             if (c.getStatus() != CustomerStatus.ACCOUNT_CLOSED) {
@@ -540,6 +567,7 @@ public class CustomerService {
         Street street = c.getStreet();
         Area area = c.getArea();
         City city = area.getCity();
+        Company company = c.getCompany();
         return new CustomerResponse(
                 c.getCustomerId(),
                 c.getFirstName(),
@@ -551,6 +579,8 @@ public class CustomerService {
                 area.getAreaName(),
                 city.getCityId(),
                 city.getCityName(),
+                company != null ? company.getCompanyId() : null,
+                company != null ? company.getCompanyName() : null,
                 c.getPhone(),
                 c.getEmail(),
                 c.getUpiId(),
@@ -567,8 +597,7 @@ public class CustomerService {
                 gracePeriodDeadline,
                 c.getAccountCreatedAt(),
                 futureSubscriptionStatus,
-                currentPackId,
-                currentPackName,
+                currentPacks,
                 currentSubscriptionId,
                 currentSubscriptionDeactivationDate,
                 futureSubscriptionId,

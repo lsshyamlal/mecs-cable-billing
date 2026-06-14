@@ -3,6 +3,7 @@ package com.mecscable.billing.dto.response;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record CustomerResponse(
         Long customerId,
@@ -15,6 +16,8 @@ public record CustomerResponse(
         String areaName,
         Long cityId,
         String cityName,
+        Long companyId,
+        String companyName,
         String phone,
         String email,
         String upiId,
@@ -31,8 +34,7 @@ public record CustomerResponse(
         LocalDate gracePeriodDeadline,
         OffsetDateTime accountCreatedAt,
         String futureSubscriptionStatus,
-        Long currentPackId,
-        String currentPackName,
+        List<PackSummary> currentPacks,
         Long currentSubscriptionId,
         LocalDate currentSubscriptionDeactivationDate,
         Long futureSubscriptionId,

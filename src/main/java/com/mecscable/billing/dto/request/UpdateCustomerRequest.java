@@ -6,6 +6,7 @@ public record UpdateCustomerRequest(
         String doorNumber,
         Long streetId,
         Long areaId,
+        Long companyId,
         String phone,
         String email,
         String upiId,

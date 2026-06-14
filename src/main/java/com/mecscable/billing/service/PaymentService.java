@@ -1,6 +1,7 @@
 package com.mecscable.billing.service;
 
 import com.mecscable.billing.dto.request.RecordPaymentRequest;
+import com.mecscable.billing.dto.response.PackSummary;
 import com.mecscable.billing.dto.response.PaymentResponse;
 import com.mecscable.billing.entity.*;
 import com.mecscable.billing.exception.ResourceNotFoundException;
@@ -15,7 +16,9 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -72,10 +75,8 @@ public class PaymentService {
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
-        SubscriptionPack pack = null;
-        if (request.packId() != null) {
-            pack = subscriptionPackRepository.findById(request.packId()).orElse(null);
-        }
+        boolean manualOverride = Boolean.TRUE.equals(request.manualOverride());
+        Set<SubscriptionPack> packs = resolvePacks(request.packIds(), manualOverride);
 
         OffsetDateTime payDate = OffsetDateTime.now(IST);
 
@@ -87,12 +88,12 @@ public class PaymentService {
         payment.setPaymentMethod(request.paymentMethod());
         payment.setRecordedBy(admin);
         payment.setNotes(request.notes());
-        payment.setPack(pack);
-        payment.setManualOverride(Boolean.TRUE.equals(request.manualOverride()));
+        payment.setPacks(packs);
+        payment.setManualOverride(manualOverride);
         payment = paymentRepository.save(payment);
 
         targetSub.setStatus(SubscriptionStatus.PAID);
-        targetSub.setPack(pack);
+        targetSub.setPacks(new LinkedHashSet<>(packs));
         subscriptionRepository.save(targetSub);
 
         // Create the next month's subscription only if one doesn't already exist
@@ -110,7 +111,7 @@ public class PaymentService {
             nextSub.setEndDate(nextEnd);
             nextSub.setStatus(SubscriptionStatus.SCHEDULED);
             nextSub.setEnrolledBy(admin);
-            nextSub.setPack(pack);
+            nextSub.setPacks(new LinkedHashSet<>(packs));
             subscriptionRepository.save(nextSub);
         }
 
@@ -181,10 +182,8 @@ public class PaymentService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No payable subscription found for " + firstOfMonth.getMonth() + " " + firstOfMonth.getYear()));
 
-        SubscriptionPack pack = null;
-        if (request.packId() != null) {
-            pack = subscriptionPackRepository.findById(request.packId()).orElse(null);
-        }
+        boolean manualOverride = Boolean.TRUE.equals(request.manualOverride());
+        Set<SubscriptionPack> packs = resolvePacks(request.packIds(), manualOverride);
 
         OffsetDateTime payDate = OffsetDateTime.now(IST);
 
@@ -196,12 +195,12 @@ public class PaymentService {
         payment.setPaymentMethod(request.paymentMethod());
         payment.setRecordedByEmployee(employee);
         payment.setNotes(request.notes());
-        payment.setPack(pack);
-        payment.setManualOverride(Boolean.TRUE.equals(request.manualOverride()));
+        payment.setPacks(packs);
+        payment.setManualOverride(manualOverride);
         payment = paymentRepository.save(payment);
 
         targetSub.setStatus(SubscriptionStatus.PAID);
-        targetSub.setPack(pack);
+        targetSub.setPacks(new LinkedHashSet<>(packs));
         subscriptionRepository.save(targetSub);
 
         LocalDate nextStart = targetSub.getEndDate().plusDays(1);
@@ -217,7 +216,7 @@ public class PaymentService {
             nextSub.setStartDate(nextStart);
             nextSub.setEndDate(nextEnd);
             nextSub.setStatus(SubscriptionStatus.SCHEDULED);
-            nextSub.setPack(pack);
+            nextSub.setPacks(new LinkedHashSet<>(packs));
             subscriptionRepository.save(nextSub);
         }
 
@@ -237,13 +236,34 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + customerId));
     }
 
+    private Set<SubscriptionPack> resolvePacks(List<Long> packIds, boolean manualOverride) {
+        if (manualOverride) {
+            if (packIds != null && !packIds.isEmpty()) {
+                throw new IllegalArgumentException("Manual override cannot be combined with selected packs");
+            }
+            return new LinkedHashSet<>();
+        }
+        if (packIds == null || packIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        Set<SubscriptionPack> packs = new LinkedHashSet<>();
+        for (Long id : packIds) {
+            SubscriptionPack pack = subscriptionPackRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Subscription pack not found: " + id));
+            packs.add(pack);
+        }
+        return packs;
+    }
+
     private PaymentResponse toResponse(Payment p) {
         Customer c = p.getCustomer();
         Admin a = p.getRecordedBy();
         Employee emp = p.getRecordedByEmployee();
         Subscription sub = p.getSubscription();
         LocalDate forMonth = sub != null ? sub.getStartDate().withDayOfMonth(1) : null;
-        SubscriptionPack pack = p.getPack();
+        List<PackSummary> packs = p.getPacks().stream()
+                .map(pk -> new PackSummary(pk.getPackId(), pk.getPackName()))
+                .toList();
         return new PaymentResponse(
                 p.getPaymentId(),
                 c.getCustomerId(),
@@ -260,8 +280,7 @@ public class PaymentService {
                 p.getNotes(),
                 p.getCreatedAt(),
                 sub != null ? sub.getStatus().name() : null,
-                pack != null ? pack.getPackId() : null,
-                pack != null ? pack.getPackName() : null,
+                packs,
                 p.isManualOverride()
         );
     }

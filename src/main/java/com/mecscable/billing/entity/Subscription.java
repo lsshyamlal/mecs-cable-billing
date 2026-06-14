@@ -11,6 +11,8 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "subscriptions")
@@ -49,9 +51,13 @@ public class Subscription {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pack_id")
-    private SubscriptionPack pack;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "subscription_pack_assignments",
+            joinColumns = @JoinColumn(name = "subscription_id"),
+            inverseJoinColumns = @JoinColumn(name = "pack_id")
+    )
+    private Set<SubscriptionPack> packs = new LinkedHashSet<>();
 
     @Column(name = "notes")
     private String notes;

@@ -42,6 +42,10 @@ public class Customer {
     @JoinColumn(name = "area_id", nullable = false)
     private Area area;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
     @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
