@@ -3,6 +3,7 @@ package com.mecscable.billing.scheduler;
 import com.mecscable.billing.dto.response.SchedulerResultResponse;
 import com.mecscable.billing.entity.*;
 import com.mecscable.billing.repository.CustomerRepository;
+import com.mecscable.billing.repository.SchedulerRunLogRepository;
 import com.mecscable.billing.repository.SubscriptionRepository;
 import com.mecscable.billing.service.AuditService;
 import com.mecscable.billing.service.CustomerService;
@@ -27,27 +28,38 @@ public class BillingScheduler {
     private final CustomerRepository customerRepository;
     private final AuditService auditService;
     private final CustomerService customerService;
+    private final SchedulerRunLogRepository schedulerRunLogRepository;
 
     public BillingScheduler(SubscriptionRepository subscriptionRepository,
                             CustomerRepository customerRepository,
                             AuditService auditService,
-                            CustomerService customerService) {
+                            CustomerService customerService,
+                            SchedulerRunLogRepository schedulerRunLogRepository) {
         this.subscriptionRepository = subscriptionRepository;
         this.customerRepository = customerRepository;
         this.auditService = auditService;
         this.customerService = customerService;
+        this.schedulerRunLogRepository = schedulerRunLogRepository;
     }
 
     // Runs daily at 3:00 AM IST
     @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Kolkata")
     @Transactional
     public SchedulerResultResponse advanceSubscriptionStatuses() {
+        return advanceSubscriptionStatuses("SYSTEM");
+    }
+
+    @Transactional
+    public SchedulerResultResponse advanceSubscriptionStatuses(String triggeredBy) {
         LocalDate today = LocalDate.now(IST);
-        log.info("Billing scheduler started for date: {}", today);
+        log.info("Billing scheduler started for date: {} (triggered by: {})", today, triggeredBy);
 
         int graceCount = moveActiveToGrace(today);
         int pendingCount = moveGraceToPaymentPending(today);
         int deactivatedCount = applyScheduledDeactivations(today);
+
+        schedulerRunLogRepository.save(
+                new SchedulerRunLog(today, triggeredBy, graceCount, pendingCount, deactivatedCount));
 
         log.info("Billing scheduler complete: {} moved to GRACE, {} moved to PAYMENT_PENDING, {} deactivated",
                 graceCount, pendingCount, deactivatedCount);

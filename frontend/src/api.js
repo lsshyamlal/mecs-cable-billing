@@ -153,6 +153,7 @@ export const removeEmployeeArea = (id, areaId) => api.delete(`/employees/${id}/a
 
 // ── Admin ────────────────────────────────────────────────────
 export const runScheduler = () => api.post('/admin/scheduler/run');
+export const getSchedulerLogs = (page = 0) => api.get(`/admin/scheduler/logs?page=${page}&size=10`);
 export const getAdminProfile = () => api.get('/admin/me');
 export const updateAdminProfile = (data) => api.put('/admin/me', data);
 export const changeAdminPassword = (data) => api.put('/admin/me/password', data);

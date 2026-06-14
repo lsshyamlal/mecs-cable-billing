@@ -4,6 +4,7 @@ import AdminLayout from '../../components/AdminLayout';
 import {
   listCustomers,
   runScheduler,
+  getSchedulerLogs,
   getMonthlyPaymentSummary,
   getCompanies,
   getCities,
@@ -45,6 +46,11 @@ export default function Dashboard() {
   const [schedulerOk, setSchedulerOk] = useState(false);
   const [schedulerLoading, setSchedulerLoading] = useState(false);
 
+  const [schedulerLogs, setSchedulerLogs] = useState(null);
+  const [schedulerLogsPage, setSchedulerLogsPage] = useState(0);
+  const [schedulerLogsTotalPages, setSchedulerLogsTotalPages] = useState(0);
+  const [schedulerLogsLoading, setSchedulerLogsLoading] = useState(false);
+
   // Hierarchy data
   const [companies, setCompanies] = useState([]);
   const [cities, setCities] = useState([]);
@@ -77,6 +83,17 @@ export default function Dashboard() {
     getGroups().then((r) => setGroups(r.data)).catch(() => setGroups([]));
     getEmployees().then((r) => setEmployees(r.data)).catch(() => setEmployees([]));
   }, []);
+
+  useEffect(() => {
+    setSchedulerLogsLoading(true);
+    getSchedulerLogs(schedulerLogsPage)
+      .then((r) => {
+        setSchedulerLogs(r.data.content);
+        setSchedulerLogsTotalPages(r.data.totalPages);
+      })
+      .catch(() => setSchedulerLogs([]))
+      .finally(() => setSchedulerLogsLoading(false));
+  }, [schedulerLogsPage]);
 
   // Cascading dropdown options
   // City ↔ company is now many-to-many — a city no longer carries a single companyId.
@@ -215,6 +232,11 @@ export default function Dashboard() {
         `Billing scheduler complete: ${data.graceCount} moved to GRACE, ${data.pendingCount} moved to PAYMENT_PENDING`
       );
       listCustomers({}).then((r) => setCustomers(r.data)).catch(() => {});
+      // Refresh logs, jump to first page to show the new entry
+      setSchedulerLogsPage(0);
+      getSchedulerLogs(0)
+        .then((r) => { setSchedulerLogs(r.data.content); setSchedulerLogsTotalPages(r.data.totalPages); })
+        .catch(() => {});
     } catch {
       setSchedulerMsg('Failed to run scheduler.');
     } finally {
@@ -441,22 +463,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick actions */}
+        {/* Billing Scheduler Log */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Quick Actions</h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => navigate('/admin/customers/new')}
-              className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition"
-            >
-              + Add Customer
-            </button>
-            <button
-              onClick={() => navigate('/admin/areas')}
-              className="bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-800 transition"
-            >
-              + Add Area
-            </button>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Billing Scheduler Log</p>
             <button
               onClick={handleRunScheduler}
               disabled={schedulerLoading}
@@ -466,9 +476,101 @@ export default function Dashboard() {
             </button>
           </div>
           {schedulerMsg && (
-            <p className={`mt-3 text-sm ${schedulerOk ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className={`mb-3 text-sm ${schedulerOk ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {schedulerMsg}
             </p>
+          )}
+          {schedulerLogsLoading ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">Loading…</p>
+          ) : schedulerLogs && schedulerLogs.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">No scheduler runs recorded yet.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                      <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Run At</th>
+                      <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Triggered By</th>
+                      <th className="text-right py-2 pr-4 text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">→ Grace</th>
+                      <th className="text-right py-2 pr-4 text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider">→ Pending</th>
+                      <th className="text-right py-2 text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">Deactivated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(schedulerLogs || []).map((log) => {
+                      const runAt = new Date(log.runAt);
+                      const total = log.graceCount + log.pendingCount + log.deactivatedCount;
+                      return (
+                        <tr
+                          key={log.id}
+                          className="border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition"
+                        >
+                          <td className="py-2.5 pr-4 text-gray-800 dark:text-gray-200 font-medium whitespace-nowrap">
+                            {log.runDate}
+                          </td>
+                          <td className="py-2.5 pr-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {runAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              log.triggeredBy === 'SYSTEM'
+                                ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                            }`}>
+                              {log.triggeredBy}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-4 text-right">
+                            {log.graceCount > 0 ? (
+                              <span className="font-semibold text-yellow-700 dark:text-yellow-400">{log.graceCount}</span>
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600">—</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 pr-4 text-right">
+                            {log.pendingCount > 0 ? (
+                              <span className="font-semibold text-orange-700 dark:text-orange-400">{log.pendingCount}</span>
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600">—</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 text-right">
+                            {log.deactivatedCount > 0 ? (
+                              <span className="font-semibold text-red-700 dark:text-red-400">{log.deactivatedCount}</span>
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {schedulerLogsTotalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => setSchedulerLogsPage((p) => Math.max(0, p - 1))}
+                    disabled={schedulerLogsPage === 0}
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 disabled:text-gray-300 dark:disabled:text-gray-600 hover:underline disabled:no-underline transition"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    Page {schedulerLogsPage + 1} of {schedulerLogsTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setSchedulerLogsPage((p) => Math.min(schedulerLogsTotalPages - 1, p + 1))}
+                    disabled={schedulerLogsPage >= schedulerLogsTotalPages - 1}
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 disabled:text-gray-300 dark:disabled:text-gray-600 hover:underline disabled:no-underline transition"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
