@@ -1,0 +1,43 @@
+# LOCAL TESTING ONLY — mirrors the Render setup (Docker image + Postgres).
+# Render does NOT use this file; it uses Dockerfile + render.yaml.
+#
+#   docker compose up --build      # build image + start app and a fresh Postgres
+#   open http://localhost:8080     # SPA + API (Flyway builds the schema on boot)
+#   docker compose down            # stop;  add -v to also wipe the DB volume
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mecs_db
+      POSTGRES_USER: mecs_user
+      POSTGRES_PASSWORD: localpass
+    volumes:
+      - mecs_pgdata:/var/lib/postgresql/data
+    # Port intentionally NOT published, to avoid clashing with any Postgres
+    # you already run locally on 5432. The app reaches it over the compose network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mecs_user -d mecs_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy   # wait for Postgres before Flyway runs
+    environment:
+      MECS_DB_HOST: db
+      MECS_DB_PORT: "5432"
+      MECS_DB_NAME: mecs_db
+      MECS_DB_USER: mecs_user
+      MECS_DB_PASS: localpass
+      MECS_JWT_SECRET: local-dev-jwt-secret-must-be-at-least-32-bytes-long-0123456789
+      MECS_CORS_ORIGIN: http://localhost:8080
+      MECS_COOKIE_SECURE: "false"    # allow login cookies over plain HTTP locally
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+
+volumes:
+  mecs_pgdata:

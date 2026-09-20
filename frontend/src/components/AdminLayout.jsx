@@ -60,6 +60,14 @@ const NAV = [
     ),
     label: 'Profile',
   },
+  {
+    to: '/admin/help', end: false,
+    icon: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M9.09 9a3 3 0 015.83 1c0 2-3 2-3 4m.08 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    ),
+    label: 'Help / User Guide',
+  },
 ];
 
 function ThemeToggle() {
@@ -149,14 +157,14 @@ export default function AdminLayout({ children }) {
         </aside>
 
         {/* Mobile bottom nav */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around py-2 z-10">
+        <nav aria-label="Admin navigation" className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 grid grid-cols-4 gap-1 px-1 py-2 z-10">
           {NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1 rounded text-xs font-medium ${
+                `flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded text-center text-xs font-medium ${
                   isActive ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
                 }`
               }
@@ -167,10 +175,10 @@ export default function AdminLayout({ children }) {
               {item.label}
             </NavLink>
           ))}
-        </div>
+        </nav>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 pb-16 sm:pb-0">
+        <main className="flex-1 min-w-0 pb-36 sm:pb-0">
           {children}
         </main>
       </div>

@@ -2,14 +2,31 @@
 
 Billing and subscription-management software for a local cable TV operator. Admin dashboard for managing customers, areas, packs, payments, and reports, plus a read-only customer portal.
 
+## User documentation
+
+- [Admin user guide](docs/ADMIN_USER_GUIDE.md) — quick reference, setup, everyday tasks, billing rules, reports, and troubleshooting.
+- [Documentation maintenance](docs/DOCUMENTATION_MAINTENANCE.md) — how to keep the guide aligned with application changes.
+
+Admins can also open **Help / User Guide** in the app at `/admin/help`, with topic navigation and search. Its content comes from `docs/ADMIN_USER_GUIDE.md`; rebuild the frontend after editing the handbook to update the deployed page.
+
+## Testing
+
+Run [the regression suite](TESTING.md) before completing any code change:
+
+```bash
+./scripts/regression_test.sh
+```
+
 ## Tech Stack
 
-- **Backend:** Java 21 / Spring Boot, Spring Security + JWT, Spring Data JPA, Flyway
+- **Backend:** Java 25 / Spring Boot, Spring Security + JWT, Spring Data JPA, Flyway
 - **Frontend:** React + Vite, Tailwind CSS
 - **Database:** PostgreSQL (timestamps stored as TIMESTAMPTZ; displayed in IST)
 - **Build:** Maven
 
 ## Run
+
+For the local Mac startup checklist, PostgreSQL workaround, and shutdown commands, see [Local development](LOCAL_DEVELOPMENT.md).
 
 ```bash
 # Backend (dev profile binds to port 9090)
@@ -22,6 +39,22 @@ cd frontend && npm install && npm run dev
 Required env vars: `MECS_DB_USER`, `MECS_DB_PASS`, `MECS_JWT_SECRET`.
 
 See `MECS_Software_Documentation.md`, `APP_FLOWS.md`, and `GCP_MIGRATION.md` for design details.
+
+## Access from other devices with Cloudflare Tunnel
+
+Start PostgreSQL and the backend on port **9090** using [Local development](LOCAL_DEVELOPMENT.md). With `cloudflared` installed (already installed on this Mac), open another terminal and run from any directory:
+
+```bash
+cloudflared tunnel --no-autoupdate --url http://127.0.0.1:9090
+```
+
+Wait for Cloudflare to print an HTTPS address such as `https://<random-name>.trycloudflare.com`. Open that address on a computer or mobile phone, including over mobile data or another Wi-Fi network, and sign in normally.
+
+- Keep the Mac awake and connected to the internet, with PostgreSQL, the backend, and this tunnel command running.
+- Port 9090 serves both the API and the built frontend. The Vite development server on port 3000 is not required for this URL, and frontend source edits are not automatically reflected there. To publish frontend changes, run `npm run build` from `frontend`, then restart the backend.
+- Press **Ctrl+C** in the tunnel terminal to stop public access through that tunnel; the local app stays running. Other independently started tunnels remain active.
+- Each new quick tunnel gets a temporary address. No Cloudflare account or domain is required; quick tunnels are intended for testing, not permanent hosting. See [Cloudflare's documentation](https://developers.cloudflare.com/tunnel/get-started/).
+- This exposes the development app and its configured database through the app's login. Replace default credentials before sharing access broadly; it does not create a separate demo database.
 
 ---
 
@@ -134,6 +167,9 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-05-30 15:43` — Fix: resolve flex layout conflict in Record Payment "For Month" dropdowns
 
 ### Latest changes
+- `2026-09-19` — Docs: add the in-app admin Help / User Guide, backed by the handbook with topic navigation and search
+- `2026-09-19` — Test: replace the stale live regression script with isolated payment/scheduler tests, handbook checks, frontend build validation, and GitHub Actions coverage
+- `2026-09-19` — UI: place Address before Personal Details on Add Customer and require Area before First Name and First Name before Phone
 - `2026-05-30 16:15` — Feat: add customer account status history tracking
 - `2026-05-30 16:42` — Feat: enforce single active session and cross-tab auth sync
 - `2026-05-30 17:19` — Docs: add GCP migration plan for moving app off local Mac
@@ -153,6 +189,7 @@ Chronological one-liner per commit on `feature/dev-work`. Timestamps are commit 
 - `2026-06-02 21:20` — Refactor: invert city–company relationship — city is now a shared entity; company belongs to a city (company.city_id FK). Removes company_id from cities table and city_id from employee_groups. Organisation drill-down becomes Company → Groups → Employees (city shown as company attribute). All cascading filters updated.
 - `2026-06-14 00:00` — Refactor: city–company relationship is many-to-many — adds company_cities join table (V25), restores city_id on employee_groups. Organisation drill-down is now Company → Cities → Groups → Employees. Global Cities panel added to Manage Organisation top level. Company table shows linked city names. Cascading customer filters updated to use company.cities array.
 - `2026-06-14 12:00` — Fix: customer deletion failing with FK violation — `deleteCustomer` now also deletes `customer_status_history` rows alongside payments and subscriptions before removing the customer
+- `2026-06-28 01:56` — Deploy: add Render (Docker) deployment — multi-stage `Dockerfile` (Node 20 frontend build → Maven/JDK 25 build → Temurin 25 JRE runtime) and `render.yaml` blueprint (Docker web service + managed PostgreSQL). Made the datasource host/port/db-name env-overridable (`MECS_DB_HOST`/`MECS_DB_PORT`/`MECS_DB_NAME`, defaulting to `localhost:5432/mecs_db`) so `render.yaml` can wire the managed DB automatically with no manual JDBC URL
 - `2026-06-14 12:30` — Feat: add show/hide password toggle to Portal Password (Create Customer) and Reset Portal Password fields, matching the Login page pattern
 - `2026-06-14 14:00` — Fix: block subscription deactivation on closed/suspended customers and on already-PAID subscriptions — backend rejects the call, frontend hides the button. Closes a hole where a PAID subscription on a closed account could still be scheduled for future deactivation.
 - `2026-06-14 16:00` — Feat: pin each customer to a specific company. Adds `customers.company_id` (NOT NULL, V26) backfilled from area→city→company_cities. Create/Edit Customer forms now require a Company first, then filter Cities to those served by that company. Backend rejects company/area combinations where the company does not serve the area's city. Customer Info panel shows the company.

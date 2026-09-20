@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mecs_db
+    url: jdbc:postgresql://${MECS_DB_HOST:localhost}:${MECS_DB_PORT:5432}/${MECS_DB_NAME:mecs_db}
     username: ${MECS_DB_USER}
     password: ${MECS_DB_PASS}
     driver-class-name: org.postgresql.Driver

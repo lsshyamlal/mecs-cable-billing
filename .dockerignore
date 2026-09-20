@@ -1,0 +1,21 @@
+# Keep the Docker build context small and reproducible.
+.git
+.github
+.claude
+target
+frontend/node_modules
+frontend/dist
+frontend/cookies.txt
+node_modules
+
+# Local/IDE/docs noise not needed for the image build
+*.md
+!docs/ADMIN_USER_GUIDE.md
+Technoman_Screenshots
+.idea
+.vscode
+.DS_Store
+*.log
+.env
+*.env.local
+scripts/regression_test.sh

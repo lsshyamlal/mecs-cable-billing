@@ -125,30 +125,6 @@ export default function CustomerForm() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Personal Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="First Name" required>
-              <input name="firstName" value={form.firstName} onChange={onChange} required className={INPUT} />
-            </Field>
-            <Field label="Last Name">
-              <input name="lastName" value={form.lastName} onChange={onChange} className={INPUT} />
-            </Field>
-            <Field label="Phone" required>
-              <input name="phone" value={form.phone} onChange={onChange} required className={INPUT} placeholder="10-digit mobile number" />
-            </Field>
-            <Field label="Email">
-              <input name="email" type="email" value={form.email} onChange={onChange} className={INPUT} />
-            </Field>
-            <Field label="UPI ID">
-              <input name="upiId" value={form.upiId} onChange={onChange} className={INPUT} />
-            </Field>
-            <Field label="STB ID">
-              <input name="stbId" value={form.stbId} onChange={onChange} className={INPUT} />
-            </Field>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Address</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="City" required>
@@ -197,6 +173,46 @@ export default function CustomerForm() {
             </Field>
             <Field label="Door Number">
               <input name="doorNumber" value={form.doorNumber} onChange={onChange} className={INPUT} />
+            </Field>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Personal Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="First Name" required>
+              <input
+                name="firstName"
+                value={form.firstName}
+                onChange={onChange}
+                required
+                disabled={!form.areaId}
+                placeholder={form.areaId ? '' : 'Pick area first'}
+                className={`${INPUT} ${!form.areaId ? 'opacity-60 cursor-not-allowed' : ''}`}
+              />
+            </Field>
+            <Field label="Last Name">
+              <input name="lastName" value={form.lastName} onChange={onChange} className={INPUT} />
+            </Field>
+            <Field label="Phone" required>
+              <input
+                name="phone"
+                value={form.phone}
+                onChange={onChange}
+                required
+                disabled={!form.firstName.trim()}
+                placeholder={form.firstName.trim() ? '10-digit mobile number' : 'Enter first name first'}
+                className={`${INPUT} ${!form.firstName.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}
+              />
+            </Field>
+            <Field label="Email">
+              <input name="email" type="email" value={form.email} onChange={onChange} className={INPUT} />
+            </Field>
+            <Field label="UPI ID">
+              <input name="upiId" value={form.upiId} onChange={onChange} className={INPUT} />
+            </Field>
+            <Field label="STB ID">
+              <input name="stbId" value={form.stbId} onChange={onChange} className={INPUT} />
             </Field>
           </div>
         </div>

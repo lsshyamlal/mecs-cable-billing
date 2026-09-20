@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -13,6 +14,7 @@ import Organisation from './pages/admin/Organisation';
 import SubscriptionPacks from './pages/admin/SubscriptionPacks';
 import Reports from './pages/admin/Reports';
 import AdminProfile from './pages/admin/AdminProfile';
+const Help = lazy(() => import('./pages/admin/Help'));
 
 function RequireCustomer({ children }) {
   const { auth } = useAuth();
@@ -50,6 +52,7 @@ function App() {
         <Route path="/admin/subscription-packs" element={<RequireAdmin><SubscriptionPacks /></RequireAdmin>} />
         <Route path="/admin/reports" element={<RequireAdmin><Reports /></RequireAdmin>} />
         <Route path="/admin/profile" element={<RequireAdmin><AdminProfile /></RequireAdmin>} />
+        <Route path="/admin/help" element={<RequireAdmin><Suspense fallback={<p className="p-6" role="status">Loading user guide…</p>}><Help /></Suspense></RequireAdmin>} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

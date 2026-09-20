@@ -1,0 +1,48 @@
+# Render Blueprint — MECS Cable Billing
+# Deploy: push to GitHub, then Render Dashboard -> New -> Blueprint -> pick this repo.
+# One Docker web service (fat JAR serving API + SPA) + one managed PostgreSQL.
+
+databases:
+  - name: mecs-db
+    databaseName: mecs_db      # matches the app default (MECS_DB_NAME)
+    user: mecs_user
+    plan: free                 # free Postgres is deleted after 30 days; upgrade to keep it
+    region: singapore          # closest free region to India
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: mecs-cable-billing
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free                 # free web services sleep after ~15 min idle (cold starts)
+    region: singapore          # must match the database region for internal networking
+    healthCheckPath: /api/auth/ping   # permitAll endpoint -> returns 200 unauthenticated
+    envVars:
+      # --- Datasource: wired automatically from the managed DB above ---
+      - key: MECS_DB_HOST
+        fromDatabase:
+          name: mecs-db
+          property: host
+      - key: MECS_DB_PORT
+        fromDatabase:
+          name: mecs-db
+          property: port
+      - key: MECS_DB_NAME
+        fromDatabase:
+          name: mecs-db
+          property: database
+      - key: MECS_DB_USER
+        fromDatabase:
+          name: mecs-db
+          property: user
+      - key: MECS_DB_PASS
+        fromDatabase:
+          name: mecs-db
+          property: password
+      # --- App secrets ---
+      - key: MECS_JWT_SECRET
+        generateValue: true    # Render generates a strong secret on first deploy
+      # --- CORS: set after first deploy to your real URL, e.g. https://mecs-cable-billing.onrender.com
+      - key: MECS_CORS_ORIGIN
+        sync: false
